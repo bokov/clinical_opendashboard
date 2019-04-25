@@ -1,4 +1,4 @@
-library(shinyjs); library(shinyalert); library(shinyBS);
+library(shinyjs); library(shinyalert); library(shinyBS); library(plotly);
 
 options(shiny.maxRequestSize=50*1024^2);
 
@@ -6,27 +6,34 @@ options(shiny.maxRequestSize=50*1024^2);
 shinyUI(fluidPage(
   tags$head(tags$link(rel="shortcut icon", href="favicon.ico"))
   ,includeCSS('df.css'),useShinyjs(),useShinyalert()
-  ,navbarPage("Open Clinical Dashboard"
+  ,navbarPage("CODEHR: Clinical Open Dashboard for Electronic Health Records"
               ,div(id="sidebar"
                    ,sidebarPanel(
-                     bsCollapse(id="filters",open="basic",multiple=F
-                                ,bsCollapsePanel("basic",style='info'
-                                                 ,"Basic filters"
-                                                 ,selectInput('selBasic'
-                                                              ,'Variables'
-                                                              ,c('A','B','C')
-                                                              , selected = 'A')
+                     bsCollapse(
+                       id="filters",open="Basic",multiple=F
+                       ,bsCollapsePanel("Basic" #,style='info'
+                                        ,span(id='hBasic'
+                                              ,icon('question-circle'))
+                                        ,'Compare variables using basic filters.'
+                                        ,selectInput(
+                                          'selBasic',''
+                                          ,unique(demogcodes[[1]])[-1]
+                                          , selected = tail(demogcodes[[1]],1)
+                                          #,multiple=T
+                                          )
                                 )
-                                ,bsCollapsePanel("advanced",style='primary'
-                                                 ,"Advanced filters"))
+                       ,bsCollapsePanel("Advanced",style='primary'
+                                                 ,"Coming soon."))
                      ,actionButton('bupdate','Update')
                      ,actionButton('bsave','Save')
                    )
                    )
               ,mainPanel('Main Panel'
-                         ,plotOutput('plotmain')
+                         ,plotlyOutput('plotmain')
                          ,bsCollapse(id="details"
-                                     ,bsCollapsePanel("filtered",'Coming soon.'))
+                                     ,bsCollapsePanel(
+                                       "Selected Variables"
+                                       ,dataTableOutput('tblsel')))
                          )
               )
   ));
