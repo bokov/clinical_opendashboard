@@ -107,15 +107,56 @@ chifilter <- function(data,groups,ncutoff=300,chicutoff=200,oddscutoff=1.5
   eval(parse(text=paste('arrange(out',varclass,sortby,')')));
 }
 
+# subset from 'data' based on codes in 'codemap' (PREFIX,CCD) with the
+# selection and order specified by 'prefix' argument
+selectcodegrps <- function(data,codemap
+                           ,prefix=c('DEM|SEX','DEM|ETHNICITY'
+                                     ,'DEM|LANGUAGE','DEM|RACE')
+                           ,prefixcol='PREFIX'){
+  sel <- try(bind_rows(lapply(prefix,function(ii){
+    subset(codemap,codemap[[prefixcol]]==ii)})));
+  left_join(sel,data);
+}
+
 # ---- Visualization ----
-quickplot <- function(data,labels='NAME',yy='FRC_All'
-                      ,xs=c('FRC_Hispanic','FRC_LowIncome')){
-  out <- ggplot(data,aes_string(y=yy));
-  col<-2;
-  for(xx in xs){
-    out <- out + geom_point(aes_string(x=xx),alpha=0.25
-                            ,color=col);
-    col <- col + 1;
+quickbars <- function(data,groups,labels='NAME',colprefix='FRC_'
+                      ,yy=paste0(colprefix,'All'),xs){
+  if(missing(xs)) xs <- paste0(colprefix,groups);
+  data0<-bind_rows(lapply(c(yy,xs),function(xx) {
+    setNames(cbind(select(data,labels,xx),gsub(colprefix,'',xx))
+             ,c('Item','Percent','Group'))}));
+  data0$tip <- with(data0,sprintf('<b>%s</b><br>%s: %s'
+                                  ,Item,Group,percent(Percent)));
+  # the factor thing is so the order of the columns is the same as
+  # their first occurrence in the input 
+  data0$Item <- factor(data0$Item,levels = unique(data0$Item));
+  out <- ggplot(data0,aes(x=Item,y=Percent,fill=Group,text=tip));
+  out + geom_col(width=0.6,position = position_dodge(width = 0.6)) +
+    scale_y_continuous(limits = 0:1,labels=percent) + xlab('')
+}
+quickpoints <- function(
+  data,groups,labels='NAME',colprefix='FRC_'
+  ,yy=paste0(colprefix,'All'),xs
+  ,cols=setNames(brewer_pal(type='qua')(length(groups)),groups)
+  ,alpha=1){
+  ttmpl <- paste0("sprintf('<b>%s</b><br>All Urology:%s<br>%s:%s',"
+      ,labels[1],",percent(",yy,")");
+  out <- ggplot(data,aes_string(y=yy
+                                # ,text=labels[1]
+                                )
+                );
+  if(missing(xs)) xs <- paste0(colprefix,groups);
+  cols <- setNames(brewer_pal(type='qua')(length(groups)),groups);
+  for(ii in seq_along(groups)){
+    # browser();
+    out <- out + geom_point(
+      aes_string(x=xs[ii]
+                 ,text=paste0(ttmpl,",'",groups[ii],"',percent(",xs[ii],'))'))
+      ,colour=cols[ii],alpha=alpha);
+    #col <- col + 1;
   }
-  out <- out + geom_abline(slope=1,intercept = 0);
+  out <- out + geom_abline(slope=1,intercept = 0) +
+    #scale_color_manual(name='Group',values=cols,guide=guide_legend()) +
+    scale_x_continuous(trans=log1p_trans(),limits = 0:1,labels=percent) +
+    scale_y_continuous(trans=log1p_trans(),limits = 0:1,labels=percent);
 }
