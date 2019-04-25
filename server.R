@@ -35,7 +35,6 @@ formals(chifilter)$groups <- n_groupnames[-1];
 dat <- read_chis(dfiles[1],dfiles[2],groupnames=n_groupnames
                  ,submulti = renamepatterns);
 dat_totals <- subset(dat,CCD==totalcode);
-demogcodes <- 
 dat <- subset(dat,dat[[n_all]]>mincountfrac*dat_totals[[n_all]]);
 
 # ---- Test Filtering and Plotting ----
