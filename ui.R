@@ -11,7 +11,12 @@ shinyUI(fluidPage(
                    ,sidebarPanel(
                      bsCollapse(id="filters",open="basic",multiple=F
                                 ,bsCollapsePanel("basic",style='info'
-                                                 ,"Basic filters")
+                                                 ,"Basic filters"
+                                                 ,selectInput('selBasic'
+                                                              ,'Variables'
+                                                              ,c('A','B','C')
+                                                              , selected = 'A')
+                                )
                                 ,bsCollapsePanel("advanced",style='primary'
                                                  ,"Advanced filters"))
                      ,actionButton('bupdate','Update')
