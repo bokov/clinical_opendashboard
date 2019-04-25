@@ -5,7 +5,7 @@
 #' ---
 
 # ---- Libraries ----
-library(dplyr); library(readr); library(ggplot2); library(scales);
+library(dplyr); library(ggplot2); library(scales);
 
 source('functions.R');
 
