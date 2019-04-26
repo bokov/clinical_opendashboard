@@ -5,7 +5,7 @@
 #' ---
 
 # ---- Libraries ----
-library(dplyr); library(ggplot2); library(scales); library(DT);
+library(dplyr); library(ggplot2); library(scales); #library(DT);
 
 source('functions.R');
 
@@ -98,16 +98,17 @@ shinyServer(function(input, output, session) {
     }
     title <- submulti(rv$rprefix,unique(demogcodes[,c('PREFIX','Category')])
                       ,method='exact') %>% unlist %>% paste0(collapse=', ');
-    output$maintext <- renderText(paste(txtMainVarCommon
-                                        ,sprintf(txtMainVar,title)));
-    
+    output$maintext <- renderText(sprintf(paste(txtMainVarCommon,txtMainVar)
+                                          ,title));
+
     ggplotly(out + ggtitle(title)
              ,tooltip='text');
   });
   # ---- Table of Selected Data ----
   output$tblsel <- renderDataTable({
     dd <- (rv$rdat[,names(rv$rdat) %in% rv$rshowcols]) %>% 
-      bind_rows(dat_totals[,intersect(names(.),names(dat_totals))]);}
+      bind_rows(dat_totals[,intersect(names(.),names(dat_totals))]);
+    message('renderDataTable Done!'); dd;}
     ,extensions = c('Buttons', 'Scroller')
     ,autoHideNavigation=T,rownames=F,fillContainer=T
     ,options=list(processing=T,searching=F,scroller=T
@@ -115,7 +116,6 @@ shinyServer(function(input, output, session) {
                   #,scroller=T,scrollx=T,scrolly=T
                   ,dom='Bfrtip',buttons=c('copy','csv','excel','print'))
   );
-  message('Done!');
   
   # ---- Debug ----
   observeEvent(input$bdebug,{
