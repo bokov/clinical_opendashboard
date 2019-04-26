@@ -87,7 +87,8 @@ shinyServer(function(input, output, session) {
     #rcolrs <- setNames(brewer_pal(type='qua')(length(rv$rgroups)),rv$rgroups);
     #rv$rcolrs <- rcols;
     if(any(rv$rdat$PREFIX %in% subset(demogcodes,is.na(CCD))$PREFIX)){
-      out <- quickpoints(rv$rdat,groups=rv$rgroups,alpha=0.3) + 
+      out <- quickpoints(rv$rdat,groups=rv$rgroups,alpha=0.3
+                         ,targetodds=rv$roddscut) + 
         theme(plot.margin=margin(15,15,30,20),aspect.ratio=1);
       txtMainVar <- txtMainVarDynamic;
     } else {
