@@ -1,3 +1,11 @@
+# ---- Small Utility Functions ----
+# p1 and p2 are proportions between 0 and 1
+# in our case, p2 corresponds to the overall population and p2 to
+# a cohort of interest
+or <- function(p1,p2){p2*(1-p1)/(p1*(1-p2))};
+# given a p1, calculate the p2 needed for a target odds ratio
+otherpr <- function(p1,target=1.5){target/(1/p1+target-1)};
+
 # ---- Rename/Remap ----
 #' Usage: `xx<-mapnames(xx,lookup)` where lookup is a named character vector
 #' the names of the elements in the character vector are what you are renaming
@@ -132,7 +140,8 @@ selectcodegrps <- function(data,codemap,groups
   # dynamic selectors-- only the prefix is set, and which variables
   # to include determined by ChiSq, OR, and N
   seldn <- bind_rows(lapply(prefix,function(ii){
-    subset(codemap,is.na(CCD) & PREFIX==ii)}))[,c('PREFIX','Category')];
+    subset(codemap,is.na(CCD) & PREFIX==ii)}))[,c('PREFIX','Category')] %>%
+    subset(!grepl('^CUSTOM=',PREFIX));
   oost <- if(nrow(selst)>0) left_join(selst,data) else c();
   oodn <- if(nrow(seldn)>0) left_join(seldn,chifilter(data,groups,...)) else c();
   for(ii in grep('^CUSTOM=',prefix,val=T)){
@@ -165,7 +174,8 @@ quickpoints <- function(
   data,groups,labels='NAME',colprefix='FRC_'
   ,yy=paste0(colprefix,'All'),xs
   #,cols=setNames(brewer_pal(type='qua')(length(groups)),groups)
-  ,alpha=0.5,other=c('Category','NAME',yy)
+  ,alpha=0.5,other=c('Category','NAME',yy),targetodds=1.5
+  ,bandclr='red'
   # tooltip template
   ,ttemplate='<b>%s</b><br>All Urology: %s<br>%s: %s'
   ,...){
@@ -185,9 +195,13 @@ quickpoints <- function(
                                       ,Cohort,percent(FRC)));
   out <- ggplot(data0,aes(y=FRC_REF,x=FRC,color=Cohort,text=tooltip)
                 ,alpha=alpha) + geom_point(alpha=alpha);
-  maxy <- max(c(data0$FRC_REF,data0$FRC));
+  maxy <- max(c(data0$FRC_REF,data0$FRC),na.rm = T);
+  bands <- data.frame(pr=seq(0,maxy,len=40)) %>% 
+    mutate(ub=otherpr(pr,targetodds),lb=otherpr(pr,1/targetodds)
+           ,tooltip=paste0('Odds Ratio >',targetodds));
   out + geom_abline(slope=1,intercept = 0) +
-    #scale_color_manual(name='Group',values=cols,guide=guide_legend()) +
+    geom_line(aes(x=pr,y=ub),data=bands,linetype=2,color=bandclr) +
+    geom_line(aes(x=pr,y=lb),data=bands,linetype=2,color=bandclr) +
     scale_x_continuous(trans=log1p_trans(),limits = c(0,maxy),labels=percent) +
     scale_y_continuous(trans=log1p_trans(),limits = c(0,maxy),labels=percent) +
     xlab('Percent of each Cohort') + ylab('Percent of All Urology');
