@@ -1,3 +1,5 @@
+# for environments needing user-space packages
+if(dir.exists('R-lib')) .libPaths(c(normalizePath('R-lib'),.libPaths()));
 library(readr);
 # selected prefixes and concept codes 
 demogcodes <- read_csv('demogcodes.csv');
