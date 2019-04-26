@@ -77,8 +77,9 @@ read_chis <- function(t1,t2,varinfo=1:3,ref=4:5,cohort=6:10,groupnames='All'
 }
 
 quickreshape <- function(data,groups,pattern=c('FRC_%s')
-                         ,other=c(),sep='_',timevar='Group'){
-  varyingarg <- c(sapply(groups,function(xx) sprintf(pattern,xx)));
+                         ,other=c(),sep='_',timevar='Cohort',...){
+  varyingarg <- setdiff(c(sapply(groups,function(xx) sprintf(pattern,xx)))
+                        ,other);
   out <- data[,c(other,varyingarg)];
   out <- reshape(out,direction='long',varying=varyingarg,sep=sep
                  ,timevar=timevar);
@@ -89,7 +90,7 @@ chifilter <- function(data,groups,ncutoff=300,chicutoff=200,oddscutoff=1.5
                       # other is where to put additional filter terms
                       # start them with '& '
                       ,oddspattern='ODDSRATIO_%1$s'
-                      ,varclass='PREFIX',sortby='All',other=''){
+                      ,varclass='PREFIX',sortby='All',other='',...){
   template <- paste('(',npattern,'>',ncutoff,'&',chipattern,'>',chicutoff
                     ,'&','abs(log(',oddspattern,'))','>',abs(log(oddscutoff))
                     ,other,')');
@@ -107,15 +108,41 @@ chifilter <- function(data,groups,ncutoff=300,chicutoff=200,oddscutoff=1.5
   eval(parse(text=paste('arrange(out',varclass,sortby,')')));
 }
 
-# subset from 'data' based on codes in 'codemap' (PREFIX,CCD) with the
-# selection and order specified by 'prefix' argument
-selectcodegrps <- function(data,codemap
+# subset from 'data' based on codes in 'codemap' (PREFIX,Category,CCD)
+# with the selection and order specified by 'prefix' argument
+selectcodegrps <- function(data,codemap,groups
                            ,prefix=c('DEM|SEX','DEM|ETHNICITY'
                                      ,'DEM|LANGUAGE','DEM|RACE')
-                           ,prefixcol='PREFIX'){
-  sel <- try(bind_rows(lapply(prefix,function(ii){
-    subset(codemap,codemap[[prefixcol]]==ii)})));
-  left_join(sel,data);
+                           # ... passed to chifilter() function
+                           ,...){
+  # validate input
+  if(!all.equal(names(codemap)[1:4]
+                ,c('PREFIX','Category','CCD','PseudoPrefix'))){
+    stop("The 'codemap' argument must be a data.frame like object"
+         ," that has columns 'PREFIX','Category', and 'CCD'.")};
+  if(!identical(unique(codemap[,c('PREFIX','CCD')])
+                ,codemap[,c('PREFIX','CCD')])){
+    stop("The data.frame like object specified by the 'codemap'"
+         ," variable must have only unique pairs of 'PREFIX' and 'CCD'.")};
+  # static selectors-- variables set explicitly and not filtered
+  # doing this lapply/bind_rows thing in order to preserve the user-specified
+  # ordering of the selected categories.
+  selst <- bind_rows(lapply(prefix,function(ii){
+    subset(codemap,!is.na(CCD) & PREFIX==ii)}));
+  # dynamic selectors-- only the prefix is set, and which variables
+  # to include determined by ChiSq, OR, and N
+  seldn <- bind_rows(lapply(prefix,function(ii){
+    subset(codemap,is.na(CCD) & PREFIX==ii)}))[,c('PREFIX','Category')];
+  oost <- if(nrow(selst)>0) left_join(selst,data) else c();
+  oodn <- if(nrow(seldn)>0) left_join(seldn,chifilter(data,groups,...)) else c();
+  for(ii in grep('^CUSTOM=',prefix,val=T)){
+    # custom pseudo-prefixes
+    ooii <- chifilter(data,groups,other=gsub('^CUSTOM=',' & ',ii),...);
+    ooii$Category <- subset(codemap,PREFIX==ii)$Category;
+    oodn <- rbind(oodn,ooii);
+  }
+  # return static and then dynamically selected variables
+  rbind(oost,oodn);
 }
 
 # ---- Visualization ----
@@ -137,26 +164,31 @@ quickbars <- function(data,groups,labels='NAME',colprefix='FRC_'
 quickpoints <- function(
   data,groups,labels='NAME',colprefix='FRC_'
   ,yy=paste0(colprefix,'All'),xs
-  ,cols=setNames(brewer_pal(type='qua')(length(groups)),groups)
-  ,alpha=1){
-  ttmpl <- paste0("sprintf('<b>%s</b><br>All Urology:%s<br>%s:%s',"
-      ,labels[1],",percent(",yy,")");
-  out <- ggplot(data,aes_string(y=yy
-                                # ,text=labels[1]
-                                )
-                );
+  #,cols=setNames(brewer_pal(type='qua')(length(groups)),groups)
+  ,alpha=0.5,other=c('Category','NAME',yy)
+  # tooltip template
+  ,ttemplate='<b>%s</b><br>All Urology: %s<br>%s: %s'
+  ,...){
   if(missing(xs)) xs <- paste0(colprefix,groups);
-  cols <- setNames(brewer_pal(type='qua')(length(groups)),groups);
-  for(ii in seq_along(groups)){
-    # browser();
-    out <- out + geom_point(
-      aes_string(x=xs[ii]
-                 ,text=paste0(ttmpl,",'",groups[ii],"',percent(",xs[ii],'))'))
-      ,colour=cols[ii],alpha=alpha);
-    #col <- col + 1;
-  }
-  out <- out + geom_abline(slope=1,intercept = 0) +
+  # validate
+  if(!all((.neededcols <- c(yy,xs,other)) %in% names(data))){
+    stop("The following columns were expected in the data and were not found:"
+         ,"\n",paste0(setdiff(.neededcols),names(data)))};
+  # put the data in long format for ggplot
+  data0 <- quickreshape(data,groups,other=other);
+  # rename the reference column to something predictable
+  names(data0) <- sub(yy,'FRC_REF',names(data0));
+  # create the tooltip column
+  # TODO: NAME isn't guaranteed to be used in future applications, think about
+  # better factoring.
+  data0$tooltip <- with(data0,sprintf(ttemplate,NAME,percent(FRC_REF)
+                                      ,Cohort,percent(FRC)));
+  out <- ggplot(data0,aes(y=FRC_REF,x=FRC,color=Cohort,text=tooltip)
+                ,alpha=alpha) + geom_point(alpha=alpha);
+  maxy <- max(c(data0$FRC_REF,data0$FRC));
+  out + geom_abline(slope=1,intercept = 0) +
     #scale_color_manual(name='Group',values=cols,guide=guide_legend()) +
-    scale_x_continuous(trans=log1p_trans(),limits = 0:1,labels=percent) +
-    scale_y_continuous(trans=log1p_trans(),limits = 0:1,labels=percent);
+    scale_x_continuous(trans=log1p_trans(),limits = c(0,maxy),labels=percent) +
+    scale_y_continuous(trans=log1p_trans(),limits = c(0,maxy),labels=percent) +
+    xlab('Percent of each Cohort') + ylab('Percent of All Urology');
 }
