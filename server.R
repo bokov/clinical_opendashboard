@@ -5,7 +5,7 @@
 #' ---
 
 # ---- Libraries ----
-library(dplyr); library(ggplot2); library(scales);
+library(dplyr); library(ggplot2); library(scales); library(DT);
 
 source('functions.R');
 
@@ -26,10 +26,12 @@ mincountfrac <- 0.01;
 
 # ---- Default Arguments ----
 formals(quickreshape)[c('groups','other')] <- list(n_groupnames[-1]
-                                                   ,c('NAME','FRC_All'));
-formals(chifilter)$groups <- n_groupnames[-1];
+                                                   ,c('Category','NAME'
+                                                      ,paste0('FRC_',n_all)));
+formals(chifilter)[c('groups','sortby')] <- list(n_groupnames[-1],n_all);
 formals(selectcodegrps)$codemap <- demogcodes;
-
+formals(quickbars)$yy <- paste0('FRC_',n_all);
+formals(quickpoints)$yy <- paste0('FRC_',n_all);
 # ---- Read Data ----
 if('cached_data.rdata' %in% list.files()){
   load('cached_data.rdata');}
@@ -57,9 +59,11 @@ shinyServer(function(input, output, session) {
   # ---- Server init ----
   rv <- reactiveValues(rgroups=n_groupnames[-1]
                        ,rprefix='UTHSCSA|FINCLASS'
-                       ,rshowcols=c('PREFIX','CCD','NAME',n_groupnames
+                       ,rshowcols=c('Category','NAME',n_groupnames
                                     ,paste0('FRC_',n_groupnames))
-                       ,rdat=selectcodegrps(dat,prefix='UTHSCSA|FINCLASS'));
+                       ,rdat=selectcodegrps(dat,prefix='UTHSCSA|FINCLASS'
+                                            ,groups=n_groupnames[-1])
+                       ,rchicut=200,rncut=300,roddscut=1.5);
   # ---- Update Button Clicked ----
   observeEvent(input$bupdate,{
     message('starting update button click');
@@ -68,28 +72,55 @@ shinyServer(function(input, output, session) {
       } else {
         rv$rprefix <- input$selBasic;
         message('updating rdat');
-        rv$rdat <- selectcodegrps(dat,prefix=rv$rprefix);
+        rv$rdat <- selectcodegrps(dat,prefix=rv$rprefix
+                                  ,groups=rv$rgroups
+                                  ,sortby=n_all
+                                  ,ncutoff=rv$rncut
+                                  ,chicutoff=rv$rchicut
+                                  ,oddscutoff=rv$roddscut);
       }
     message('update button click done');
   });
   # ---- Main Plot ---- 
   output$plotmain <- renderPlotly({
     message('About to render main plot');
-    rcols <- setNames(brewer_pal(type='qua')(length(rv$rgroups)),rv$rgroups);
-    rv$rcols <- rcols;
-    ggplotly(quickbars(rv$rdat,groups=rv$rgroups) +
-               ggtitle(paste0(gsub('^.*\\|','',rv$rprefix),collapse=', ')) +
-               theme(axis.text.x=element_text(angle=30)
-                     ,plot.margin = margin(30,30,60,40)),tooltip='text'
-             )
-    # ggplotly(quickplot(rv$rdat,groups=rv$rgroups,cols=rcols) +
-    #         ggtitle(paste0(gsub('^.*\\|','',rv$rprefix),collapse=', ')) +
-    #         xlab(paste('%',paste0(rv$rgroups,collapse=', '),'Patients')) +
-    #         ylab(paste('%',n_all,'\n')),tooltip=c('text','name'));
+    #rcolrs <- setNames(brewer_pal(type='qua')(length(rv$rgroups)),rv$rgroups);
+    #rv$rcolrs <- rcols;
+    if(any(rv$rdat$PREFIX %in% subset(demogcodes,is.na(CCD))$PREFIX)){
+      out <- quickpoints(rv$rdat,groups=rv$rgroups,alpha=0.3) + 
+        theme(plot.margin=margin(15,15,30,20),aspect.ratio=1);
+      txtMainVar <- txtMainVarDynamic;
+    } else {
+      out <- quickbars(rv$rdat,groups=rv$rgroups) +
+        theme(axis.text.x=element_text(angle=30)
+              ,plot.margin = margin(30,30,60,40));
+      txtMainVar <- txtMainVarStatic;
+    }
+    title <- submulti(rv$rprefix,unique(demogcodes[,c('PREFIX','Category')])
+                      ,method='exact') %>% unlist %>% paste0(collapse=', ');
+    output$maintext <- renderText(paste(txtMainVarCommon
+                                        ,sprintf(txtMainVar,title)));
+    
+    ggplotly(out + ggtitle(title)
+             ,tooltip='text');
   });
   # ---- Table of Selected Data ----
-  output$tblsel <- renderDataTable(rv$rdat[,names(dat) %in% rv$rshowcols]);
-  message('Done!')
+  output$tblsel <- renderDataTable({
+    dd <- (rv$rdat[,names(rv$rdat) %in% rv$rshowcols]) %>% 
+      bind_rows(dat_totals[,intersect(names(.),names(dat_totals))]);}
+    ,extensions = c('Buttons', 'Scroller')
+    ,autoHideNavigation=T,rownames=F,fillContainer=T
+    ,options=list(processing=T,searching=F,scroller=T
+                  ,scrollx='100%',scrolly='20vh'
+                  #,scroller=T,scrollx=T,scrolly=T
+                  ,dom='Bfrtip',buttons=c('copy','csv','excel','print'))
+  );
+  message('Done!');
+  
+  # ---- Debug ----
+  observeEvent(input$bdebug,{
+    browser();
+    });
 });
 
 c()
