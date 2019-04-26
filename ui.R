@@ -1,4 +1,5 @@
-library(shinyjs); library(shinyalert); library(shinyBS); library(plotly);
+library(shinyjs); library(shinyalert); library(shinyBS); library(plotly); 
+library(DT);
 
 options(shiny.maxRequestSize=50*1024^2);
 
@@ -11,8 +12,8 @@ shinyUI(fluidPage(
   ,mainPanel(
     width=12,fluidRow(
       column(2
-             ,bsCollapse(id="filters",open="Basic",multiple=F
-                         ,bsCollapsePanel(title=span("Basic",icon('angle-down')) 
+             ,bsCollapse(id="filters" #,open="Basic",multiple=F
+                         ,bsCollapsePanel(title=span("Variables",icon('angle-down')) 
                                           ,value="Basic"
                                           ,span(span(id='hBasic'
                                                      ,hidden(icon('question-circle')))
@@ -23,11 +24,12 @@ shinyUI(fluidPage(
                                                        ,selected = 'UTHSCSA|FINCLASS' 
                                                        #,multiple=T
                                                        )
+                                          ,actionButton('bupdate','Update')
                                           )
-                         ,bsCollapsePanel(title=span("Advanced"
-                                                     ,icon('angle-down'))
-                                          ,"Coming soon."))
-             ,actionButton('bupdate','Update')
+                         # ,bsCollapsePanel(title=span("Advanced"
+                         #                             ,icon('angle-down'))
+                         #                  ,"Coming soon.")
+                         )
              #,actionButton('bdebug','Debug')
              )
       ,column(10,textOutput('maintext')
