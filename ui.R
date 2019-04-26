@@ -28,7 +28,7 @@ shinyUI(fluidPage(
                                                      ,icon('angle-down'))
                                           ,"Coming soon."))
              ,actionButton('bupdate','Update')
-             ,actionButton('bdebug','Debug')
+             #,actionButton('bdebug','Debug')
              )
       ,column(10,textOutput('maintext')
               ,plotlyOutput('plotmain',width = '79vmin',height = '70vmin'))
