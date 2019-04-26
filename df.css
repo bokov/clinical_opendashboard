@@ -2,18 +2,19 @@
 body,.dfHelp,.dfHelp code {
   font-family: "Open Sans",Trebuchet,sans-serif;
 }
-.panel-primary,.panel-collapse>.panel-body{
+/*.panel-primary,.panel-collapse>.panel-body{
   border-color: #008c99 !important; }
-a,.fa-question-circle { color: #008c99; font-weight: 600;}
-a:hover { color: #004067;}
+a,*/
+.fa-question-circle { color: #008c99; font-weight: 600;}
+/*a:hover { color: #004067;}*/
 .container-fluid>.row {
   color: #C0511B;
   /*background-color: white;*/
-  margin-bottom: 10px;
+  margin: 1vmin; margin-bottom: 2vmin;
 }
 
 /* header in accordance with UT header styling */
-h3 {font-family: "Cardo", "Times New Roman", serif;}
+h3 {font-family: "Cardo", "Times New Roman", serif; margin: auto;}
 
 /* The next few are to line up the page header */
 #apptitle {
@@ -29,17 +30,19 @@ h3 {font-family: "Cardo", "Times New Roman", serif;}
   margin-top: 6px;
 }
 
-/* progress bar styling */
-#infile_progress { margin: 1px 0; height: 15px;}
-#infile_progress>.progress-bar{
-  /*background-color: rgb(134, 56, 19);*/
-  background-color: #008c99;
-  line-height: 15px;
-}
+/* Form elements */
 
-#infile_ui>.shiny-input-container { 
-  padding-top: 10px;
-  margin-bottom: 0; 
+/* progress bar styling
+#infile_progress { margin: 1px 0; height: 15px;}
+#infile_progress>.progress-bar{ */
+  /*background-color: rgb(134, 56, 19);*/
+/*  background-color: #008c99;
+  line-height: 15px;
+}*/
+
+.shiny-input-container { 
+  padding: 0;
+  margin: 0; 
 }
 
 #debug_button {margin-top: 38px;}
@@ -103,12 +106,21 @@ label {color: black; font-weight: 400; text-align: justify;}
 
 /* make panel headings more compact and UT-ish */
 .panel-heading {
-  padding-top: 2px; 
-  padding-bottom: 2px;
-  background-color: #008c99 !important;
+  /*padding-top: 2px; padding-bottom: 2px;*/
+  padding: auto;
+  margin: auto;
+  background-color: 'white' !important;
 }
 
-.panel-heading:hover {background-color: #004067 !important;}
+.panel-heading:hover {background-color: 'whitesmoke' !important;}
+
+/* Prevents active elements from being mistaken for web links */
+.panel-heading a:any-link {text-decoration: none;}
+
+/* Put some room above and below a column */
+.col-sm-2 {
+  margin-bottom: 4vh; margin-top: 3vh;
+}
 
 /* To make the available columns scroll inside the page */
 #tb_transform{
@@ -146,11 +158,11 @@ ul.nav>li>a {
 
 
 /* make buttons more compact */
-.btn,.dfHelp>div>button {
+/*.btn,.dfHelp>div>button {
   padding: 0 6px 0 6px;
   margin-left: 6px;
   margin-top: 5px;
-}
+}*/
 
 /* To line up the selection widgets for available transforms*/
 .transform-argsel {
