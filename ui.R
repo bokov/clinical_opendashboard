@@ -32,7 +32,7 @@ shinyUI(fluidPage(
                          )
              #,actionButton('bdebug','Debug')
              )
-      ,column(10,textOutput('maintext')
+      ,column(10,textOutput('maintext'),br()
               ,plotlyOutput('plotmain',width = '79vmin',height = '70vmin'))
       )
     ,fluidRow(bsCollapse(id="details"

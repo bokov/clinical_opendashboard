@@ -175,7 +175,7 @@ quickpoints <- function(
   ,yy=paste0(colprefix,'All'),xs
   #,cols=setNames(brewer_pal(type='qua')(length(groups)),groups)
   ,alpha=0.5,other=c('Category','NAME',yy),targetodds=1.5
-  ,bandclr='red'
+  ,bandclr='orange'
   # tooltip template
   ,ttemplate='<b>%s</b><br>All Urology: %s<br>%s: %s'
   ,...){
@@ -198,10 +198,10 @@ quickpoints <- function(
   maxy <- max(c(data0$FRC_REF,data0$FRC),na.rm = T);
   bands <- data.frame(pr=seq(0,maxy,len=40)) %>% 
     mutate(ub=otherpr(pr,targetodds),lb=otherpr(pr,1/targetodds)
-           ,tooltip=paste0('Odds Ratio >',targetodds));
+           ,tooltip=paste('Odds Ratio =',targetodds));
   out + geom_abline(slope=1,intercept = 0) +
-    geom_line(aes(x=pr,y=ub),data=bands,linetype=2,color=bandclr) +
-    geom_line(aes(x=pr,y=lb),data=bands,linetype=2,color=bandclr) +
+    geom_line(aes(x=pr,y=ub),data=bands,linetype=3,color=bandclr) +
+    geom_line(aes(x=pr,y=lb),data=bands,linetype=3,color=bandclr) +
     scale_x_continuous(trans=log1p_trans(),limits = c(0,maxy),labels=percent) +
     scale_y_continuous(trans=log1p_trans(),limits = c(0,maxy),labels=percent) +
     xlab('Percent of each Cohort') + ylab('Percent of All Urology');
