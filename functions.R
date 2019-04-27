@@ -198,7 +198,7 @@ quickpoints <- function(
   maxy <- max(c(data0$FRC_REF,data0$FRC),na.rm = T);
   bands <- data.frame(pr=seq(0,maxy,len=40)) %>% 
     mutate(ub=otherpr(pr,targetodds),lb=otherpr(pr,1/targetodds)
-           ,tooltip=paste0('Odds Ratio >',targetodds));
+           ,tooltip=paste('Odds Ratio =',targetodds));
   out + geom_abline(slope=1,intercept = 0) +
     geom_line(aes(x=pr,y=ub),data=bands,linetype=2,color=bandclr) +
     geom_line(aes(x=pr,y=lb),data=bands,linetype=2,color=bandclr) +
