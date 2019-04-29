@@ -68,17 +68,16 @@ shinyServer(function(input, output, session) {
   observeEvent(input$bupdate,{
     message('starting update button click');
     if(length(input$selBasic)==0){
-      updateSelectInput(session,inputId='selBasic',selected=rv$rprefix)
-      } else {
-        rv$rprefix <- input$selBasic;
-        message('updating rdat');
-        rv$rdat <- selectcodegrps(dat,prefix=rv$rprefix
-                                  ,groups=rv$rgroups
-                                  ,sortby=n_all
-                                  ,ncutoff=rv$rncut
-                                  ,chicutoff=rv$rchicut
-                                  ,oddscutoff=rv$roddscut);
-      }
+      updateSelectInput(session,inputId='selBasic',selected=rv$rprefix);
+      #TODO: update the sliders too
+      } else {rv$rprefix <- input$selBasic};
+    message('updating rdat');
+    rv$rncut <- input$slN;
+    rv$rchicut <- input$slChi;
+    rv$roddscut <- input$slOR;
+    rv$rdat <- selectcodegrps(dat,prefix=rv$rprefix,groups=rv$rgroups
+                              ,sortby=n_all,ncutoff=rv$rncut
+                              ,chicutoff=rv$rchicut,oddscutoff=rv$roddscut);
     message('update button click done');
   });
   # ---- Main Plot ---- 
