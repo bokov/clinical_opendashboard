@@ -12,8 +12,8 @@ shinyUI(fluidPage(
   ,mainPanel(
     width=12,fluidRow(
       column(2
-             ,bsCollapse(id="filters" #,open="Basic",multiple=F
-                         ,bsCollapsePanel(title=span("Variables",icon('angle-down')) 
+             ,bsCollapse(id="filters",multiple=T #,open="Basic"
+                         ,bsCollapsePanel(title=span("Basic",icon('angle-down')) 
                                           ,value="Basic"
                                           ,span(span(id='hBasic'
                                                      ,hidden(icon('question-circle')))
@@ -24,12 +24,24 @@ shinyUI(fluidPage(
                                                        ,selected = 'UTHSCSA|FINCLASS' 
                                                        #,multiple=T
                                                        )
-                                          ,actionButton('bupdate','Update')
                                           )
-                         # ,bsCollapsePanel(title=span("Advanced"
-                         #                             ,icon('angle-down'))
-                         #                  ,"Coming soon.")
+                         ,bsCollapsePanel(title=span("Advanced"
+                                                      ,icon('angle-down'))
+                                          ,sliderInput('slN','Count cutoff'
+                                                       ,min=50,max=2000
+                                                       ,value=300,step = 1)
+                                          ,sliderInput('slOR'
+                                                       ,'Odds ratio cutoff'
+                                                       ,min=1.1,max=4,value=1.5
+                                                       ,step=0.01)
+                                          ,sliderInput('slChi'
+                                                       ,'Chi-square cutoff'
+                                                       ,min=0,max=1000
+                                                       ,value=200)
+                                          
+                                          )
                          )
+             ,actionButton('bupdate','Update')
              #,actionButton('bdebug','Debug')
              )
       ,column(10,textOutput('maintext'),br()
