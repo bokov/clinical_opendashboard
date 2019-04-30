@@ -6,6 +6,13 @@ or <- function(p1,p2){p2*(1-p1)/(p1*(1-p2))};
 # given a p1, calculate the p2 needed for a target odds ratio
 otherpr <- function(p1,target=1.5){target/(1/p1+target-1)};
 
+# split vector xx at the positions indicated by vectir pos
+# as per https://stackoverflow.com/questions/16357962/r-split-numeric-vector-at-position#comment28556464_19274414
+splitAt <- function(xx, pos) {
+  pos <- c(1L, pos, length(xx) + 1L); 
+  Map(function(xx, i, j) xx[i:j], list(xx), head(pos, -1L), tail(pos, -1L) - 1L)
+  };
+
 # ---- Rename/Remap ----
 #' Usage: `xx<-mapnames(xx,lookup)` where lookup is a named character vector
 #' the names of the elements in the character vector are what you are renaming
@@ -52,25 +59,37 @@ submulti <- function(xx,searchrep
 # ---- Manage Data ----
 read_chis <- function(t1,t2,varinfo=1:3,ref=4:5,cohort=6:10,groupnames='All'
                       ,submulti=matrix(ncol=2,nrow=0)){
-  if(!is(t1,'data.frame')) t1 <- read_csv(t1);
-  if(!is(t2,'data.frame')) t2 <- read_csv(t2);
-  if(missing(groupnames)){
-    groupnames <- c(groupnames,names(t1)[cohort[1]],names(t2)[cohort[1]]);
-  } else{
-    if(length(groupnames)!=3){
-      stop('If you manually set a groupnames variable then it must be '
-           ,'a character vector of three names')}
-    # rename the cohorts in their respective columns
-    submulti <- rbind(submulti
-                      ,c(names(t1)[cohort][1],groupnames[2])
-                      ,c(names(t2)[cohort][1],groupnames[3]))
+  if(!is(t1,'data.frame')) {
+    t1 <- read_csv(t1);
+    # does read_csv guarantee unique names?
+    names1 <- gsub('^FRC_','',grep('^_',names(t1),val=T));
+    # get positions of raw names
+    # subdivide into their 'zones'
+    # rename first name to N_REF and second to FRC_REF
+    # if they don't match, error
+    # cycle through the remaining ii zones and raw names , renaming first 
+    # occurring  ii to N_ii, CHISQ to CHISQ_ii, ODDS_RATIO to OR_ii, 
+    # (and DIR to DIR_ii) until all processed
   }
-  # rename the reference population columns
-  submulti <- rbind(submulti
-                    ,c(names(t1)[ref][1],groupnames[1])
-                    ,c(names(t2)[ref][1],groupnames[1]))
-  names(t1) <- submulti(names(t1),submulti);
-  names(t2) <- submulti(names(t2),submulti);
+  if(!is(t2,'data.frame')) t2 <- read_csv(t2);
+  browser();
+  # if(missing(groupnames)){
+  #   groupnames <- c(groupnames,names(t1)[cohort[1]],names(t2)[cohort[1]]);
+  # } else{
+  #   if(length(groupnames)!=3){
+  #     stop('If you manually set a groupnames variable then it must be '
+  #          ,'a character vector of three names')}
+  #   # rename the cohorts in their respective columns
+  #   submulti <- rbind(submulti
+  #                     ,c(names(t1)[cohort][1],groupnames[2])
+  #                     ,c(names(t2)[cohort][1],groupnames[3]))
+  # }
+  # # rename the reference population columns
+  # submulti <- rbind(submulti
+  #                   ,c(names(t1)[ref][1],groupnames[1])
+  #                   ,c(names(t2)[ref][1],groupnames[1]))
+  # names(t1) <- submulti(names(t1),submulti);
+  # names(t2) <- submulti(names(t2),submulti);
   if(any(names(t1)[c(varinfo,ref)]!=names(t1)[c(varinfo,ref)])){
     warning('Some variable names or reference column names do not match.'
            ,'Attempting to fix');
