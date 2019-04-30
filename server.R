@@ -83,8 +83,6 @@ shinyServer(function(input, output, session) {
   # ---- Main Plot ---- 
   output$plotmain <- renderPlotly({
     message('About to render main plot');
-    #rcolrs <- setNames(brewer_pal(type='qua')(length(rv$rgroups)),rv$rgroups);
-    #rv$rcolrs <- rcols;
     if(any(rv$rdat$PREFIX %in% subset(demogcodes,is.na(CCD))$PREFIX)){
       out <- quickpoints(rv$rdat,groups=rv$rgroups,alpha=0.3
                          ,targetodds=rv$roddscut) + 
