@@ -57,6 +57,72 @@ submulti <- function(xx,searchrep
 
 
 # ---- Manage Data ----
+
+standardize_chis <- function(dat
+                             # set to NULL or c() to not do searchrep
+                             ,searchrep=rbind(c('ODDS_RATIO','OR'))
+                             ,readfn=readr::read_csv,...){
+  if(!is(dat,'data.frame') && is.character(dat)) dat <- readfn(dat);
+  if(!all(c('PREFIX','CCD') %in% names(dat))){
+    stop("The object specified by the 'dat' argument is not a valid Chinotype"
+         ,"table. It is missing a 'PREFIX' and/or a 'CCD' column")};
+  .orignames <- names(dat);
+  if(NROW(dat)==0) warning("The object specified by the 'dat' argument has"
+                           ," 0 rows. This may cause errors further on.");
+  # any up-front search replaces
+  if(NROW(searchrep)>0) names(dat) <- submulti(names(dat),searchrep);
+  names(dat) <- toupper(names(dat));
+  # make sure there is a TOTAL row, warn if not
+  if(nrow(subset(dat,PREFIX=='TOTAL'&CCD=='TOTAL'))==0){
+    warning("The object specified by the 'dat' arguments is missing a"
+            ," 'TOTAL' row, and this may cause errors further on.")};
+  # get the base names
+  basenames <- gsub('^FRC_','',grep('^FRC_',names(dat),val=T));
+  names(dat) <- submulti(names(dat),cbind(paste0('^',basenames,'$')
+                                          ,paste0('N_',basenames)));
+  # replace ^basename$ with N_basename
+  # replace first basename with N_REF, FRC_REF and error if either not found
+  names(dat) <- gsub(paste0('_',basenames[1]),'_REF',names(dat));
+  basenames[1] <- 'REF';
+  splitcols <- paste0('N_',basenames); splitidx <- match(splitcols,names(dat));
+  if(!all(c('N_REF','FRC_REF') %in% names(dat))){
+    # TODO: make this error easier to understand and the warning after it
+    stop("The object specified by the 'dat' argument seems to be missing the"
+         ," count and/or the fraction column for the reference group.")};
+  if(length(splitcols)!=length(splitidx)){
+    warning("The object specified by the 'dat' argument is missing one or more"
+         ," count columns. This may cause errors later.")};
+  # splitAt N_foo columns and label with basenames
+  sections <- setNames(splitAt(seq_along(names(dat)),splitidx)
+                       ,c('Info',basenames));
+  # TODO: warn/error if OR or CHISQ exists in the N_REF/FRC_REF range
+  canonicalnames <- c('PREFIX','CCD'
+                      ,if('NAME' %in% names(dat)) 'NAME' else NULL
+                      ,'N_REF','FRC_REF');
+  for(ii in basenames[-1]){
+    iisection <- sections[[ii]]; iinames <- names(dat)[iisection];
+    iichi <- paste0('CHISQ_',ii); iior <- paste0('OR_',ii);
+    # standardize chisq column names
+    if(!iichi %in% names(dat)) iinames <- gsub('CHISQ',iichi,iinames);
+    if(!iior %in% names(dat)) iinames <- gsub('OR',iior,iinames);
+    names(dat)[iisection] <- iinames;
+    if(length(.missing <- setdiff(c(iichi,iior),names(dat)))>0){
+      stop(sprintf("Cannot identify a '%s' column",paste(.missing
+                                                         ,collapse=', '))
+           ," in the object specified by the 'dat' argument")};
+    canonicalnames <- c(canonicalnames,paste0(c('N_','FRC_'),ii),iichi,iior);
+  }
+  # detect duplicate N_,FRC_,OR_,CHISQ_ columns and warn if any
+  if(length(match(canonicalnames,names(dat)))!=length(canonicalnames)){
+    warning("Duplicate column names found in object specified by the 'dat'"
+            ," argument. This may cause errors further down.")};
+  # generate canonical output header, including non-required columns if they
+  # exist, put all unknown column names at the end
+  canonicalnames <- c(canonicalnames,setdiff(names(dat),canonicalnames));
+  # return result
+  dat[,canonicalnames];
+}
+
 read_chis <- function(t1,t2,varinfo=1:3,ref=4:5,cohort=6:10,groupnames='All'
                       ,submulti=matrix(ncol=2,nrow=0)){
   if(!is(t1,'data.frame')) {
