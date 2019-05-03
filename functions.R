@@ -58,7 +58,7 @@ submulti <- function(xx,searchrep
 
 # ---- Manage Data ----
 
-standardize_chis <- function(dat
+standardize_chis <- function(dat,keepextra=F
                              # set to NULL or c() to not do searchrep
                              ,searchrep=rbind(c('ODDS_RATIO','OR'))
                              ,readfn=readr::read_csv,...){
@@ -118,54 +118,19 @@ standardize_chis <- function(dat
             ," argument. This may cause errors further down.")};
   # generate canonical output header, including non-required columns if they
   # exist, put all unknown column names at the end
-  canonicalnames <- c(canonicalnames,setdiff(names(dat),canonicalnames));
+  if(keepextra){
+    canonicalnames <- c(canonicalnames,setdiff(names(dat),canonicalnames))};
   # return result
   dat[,canonicalnames];
 }
 
-read_chis <- function(t1,t2,varinfo=1:3,ref=4:5,cohort=6:10,groupnames='All'
-                      ,submulti=matrix(ncol=2,nrow=0)){
-  if(!is(t1,'data.frame')) {
-    t1 <- read_csv(t1);
-    # does read_csv guarantee unique names?
-    names1 <- gsub('^FRC_','',grep('^_',names(t1),val=T));
-    # get positions of raw names
-    # subdivide into their 'zones'
-    # rename first name to N_REF and second to FRC_REF
-    # if they don't match, error
-    # cycle through the remaining ii zones and raw names , renaming first 
-    # occurring  ii to N_ii, CHISQ to CHISQ_ii, ODDS_RATIO to OR_ii, 
-    # (and DIR to DIR_ii) until all processed
-  }
-  if(!is(t2,'data.frame')) t2 <- read_csv(t2);
-  browser();
-  # if(missing(groupnames)){
-  #   groupnames <- c(groupnames,names(t1)[cohort[1]],names(t2)[cohort[1]]);
-  # } else{
-  #   if(length(groupnames)!=3){
-  #     stop('If you manually set a groupnames variable then it must be '
-  #          ,'a character vector of three names')}
-  #   # rename the cohorts in their respective columns
-  #   submulti <- rbind(submulti
-  #                     ,c(names(t1)[cohort][1],groupnames[2])
-  #                     ,c(names(t2)[cohort][1],groupnames[3]))
-  # }
-  # # rename the reference population columns
-  # submulti <- rbind(submulti
-  #                   ,c(names(t1)[ref][1],groupnames[1])
-  #                   ,c(names(t2)[ref][1],groupnames[1]))
-  # names(t1) <- submulti(names(t1),submulti);
-  # names(t2) <- submulti(names(t2),submulti);
-  if(any(names(t1)[c(varinfo,ref)]!=names(t1)[c(varinfo,ref)])){
-    warning('Some variable names or reference column names do not match.'
-           ,'Attempting to fix');
-    names(t2)[c(varinfo,ref)] <- names(t1)[c(varinfo)];
-  }
-  byarg <- setNames(names(t1)[c(varinfo,ref)],names(t2)[c(varinfo,ref)]);
-  out <- full_join(t1,t2,by=byarg,suffix=paste0('_',groupnames[2:3]));
+read_chis <- function(t1,t2,searchrep=rbind(c('ODDS_RATIO','OR'))){
+  if(!is(t1,'data.frame')) t1 <- standardize_chis(t1,searchrep = searchrep);
+  if(!is(t2,'data.frame')) t2 <- standardize_chis(t2,searchrep = searchrep);
+  out <- dplyr::full_join(t1,t2);
   if(!all.equal(nrow(out),nrow(t1),nrow(t2))){
     warning('Rows from the individual tables have been either lost '
-           ,'or duplicated');}
+           ,'or duplicated')};
   return(out);
 }
 
