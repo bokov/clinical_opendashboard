@@ -11,8 +11,8 @@ source('functions.R');
 
 
 # ---- Global variables ---- 
-dfiles <- 'ALL_HISPANIC.csv';
-#dfiles <- c('ALL_HISPANIC.csv','ALL_LOWINCOME.csv','foo.csv');
+#dfiles <- 'ALL_HISPANIC.csv';
+dfiles <- c('ALL_HISPANIC.csv','ALL_LOWINCOME.csv','foo.csv');
 #                          rename from, rename to
 chirename <- rbind(c('ODDS_RATIO','OR')
                         # if the left three columns in every data file
@@ -62,6 +62,9 @@ if(!exists('dat')||!exists('dat_totals')){
   attr(dat,'sectioncols') <- attr(raw,'sectioncols');
   save(dat,dat_totals,file='cached_data.rdata');
 }
+# adapt slidevals sample size default based on smallest cohort size
+slidevals$N <- round(min(dat_totals[,grep('^N_',names(dat_totals))]) * 
+                       mincountfrac);
 # ---- Test Filtering and Plotting ----
 message('Running test0');
 dat_test0 <- chifilter(dat);
@@ -80,8 +83,10 @@ shinyServer(function(input, output, session) {
                        ,rshowcols=c('Category','NAME'
                                     ,grep('^(N_|FRC_)',names(dat),val=T))
                        ,rdat=selectcodegrps(dat,prefix='UTHSCSA|FINCLASS')
-                       ,rchicut=200,rncut=300,roddscut=1.5
-                       ,needupdate=0);
+                       ,rchicut=slidevals$Chi
+                       ,rncut=slidevals$N,roddscut=slidevals$OR);
+  message('One-time clicking bupdate on init...');
+  click('breset');
   # ---- Reset ----
   # allow the user to reset the sliders to their starting values
   observeEvent(input$breset,{
@@ -96,7 +101,7 @@ shinyServer(function(input, output, session) {
     message('Done with reset click');
   });
   # ---- Update Button Clicked ----
-  observeEvent({input$bupdate;rv$needupdate},{
+  observeEvent({input$bupdate},{
     message('starting update button click');
     if(length(input$selBasic)==0){
       updateSelectInput(session,inputId='selBasic',selected=rv$rprefix)};
