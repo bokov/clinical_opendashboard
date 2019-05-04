@@ -8,6 +8,13 @@ demogcodes <- read_csv('demogcodes.csv');
 # version of PREFIX.
 selBasicChoices <- with(unique(demogcodes[,c('PREFIX','Category')])
                         ,setNames(PREFIX,Category));
+# slider defaults
+slidevals <- list(N=300,OR=1.5
+                  ,Chi=200
+                  #,Chi=0.2
+                  );
 # UI text
 source('uitext.R');
+# to override various stuff
+if(file.exists('project_uitext.R')) source('project_uitext.R');
 c()

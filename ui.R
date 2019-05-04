@@ -8,7 +8,7 @@ shinyUI(fluidPage(
   tags$head(tags$link(rel="shortcut icon", href="favicon.ico"))
   ,includeCSS('df.css'),useShinyjs(),useShinyalert()
   ,fluidRow(h3("CODEHR: Clinical Open Dashboard for Electronic Health Records")
-              ,tags$em('Urology early adopter alpha edition'))
+              ,tags$em(txtPageSubtitle))
   ,mainPanel(
     width=12,fluidRow(
       column(2
@@ -29,20 +29,25 @@ shinyUI(fluidPage(
                                                       ,icon('angle-down'))
                                           ,sliderInput('slN','Count cutoff'
                                                        ,min=50,max=2000
-                                                       ,value=300,step = 1)
+                                                       ,value=slidevals$N
+                                                       ,step = 1)
                                           ,sliderInput('slOR'
                                                        ,'Odds ratio cutoff'
-                                                       ,min=1.1,max=4,value=1.5
+                                                       ,min=1.1,max=4
+                                                       ,value=slidevals$OR
                                                        ,step=0.01)
                                           ,sliderInput('slChi'
-                                                       ,'Chi-square cutoff'
-                                                       ,min=0,max=1000
-                                                       ,value=200)
-                                          
+                                                       ,'Chi square cutoff'
+                                                       ,min=0
+                                                       ,max=2000
+                                                       #,max=1
+                                                       ,value=slidevals$Chi)
+                                          ,actionButton('breset'
+                                                        ,'Reset Sliders')
                                           )
                          )
              ,actionButton('bupdate','Update')
-             #,actionButton('bdebug','Debug')
+             ,if(file.exists('.debug')) actionButton('bdebug','Debug') else c()
              )
       ,column(10,textOutput('maintext'),br()
               ,plotlyOutput('plotmain',width = '79vmin',height = '70vmin'))
