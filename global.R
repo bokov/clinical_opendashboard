@@ -9,7 +9,10 @@ demogcodes <- read_csv('demogcodes.csv');
 selBasicChoices <- with(unique(demogcodes[,c('PREFIX','Category')])
                         ,setNames(PREFIX,Category));
 # slider defaults
-slidevals <- list(N=300,OR=1.5,Chi=200);
+slidevals <- list(N=300,OR=1.5
+                  ,Chi=200
+                  #,Chi=0.2
+                  );
 # UI text
 source('uitext.R');
 c()

@@ -190,7 +190,10 @@ chifilter <- function(data,ncutoff=300,chicutoff=200,oddscutoff=1.5
     groups <- setdiff(names(attr(data,'sectioncols')),c('Info','REF'))} else {
       warning("It is recommended you not manually specify the 'groups'"
               ,"argument. If you encounter an error, check there first.")};
-  template <- paste('(',npattern,'>',ncutoff,'&',chipattern,'>',chicutoff
+  template <- paste('(',npattern,'>',ncutoff
+                    #,'& p.adjust(pchisq(',chipattern,',df=1,lower=F),"fdr")<'
+                    ,'& ',chipattern,'>'
+                    ,chicutoff
                     ,'&','abs(log(',oddspattern,'))','>',abs(log(oddscutoff))
                     ,other,')');
   filter <- paste(sapply(groups,function(xx) sprintf(template,xx))

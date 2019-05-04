@@ -37,8 +37,10 @@ shinyUI(fluidPage(
                                                        ,value=slidevals$OR
                                                        ,step=0.01)
                                           ,sliderInput('slChi'
-                                                       ,'Chi-square cutoff'
-                                                       ,min=0,max=1000
+                                                       ,'Chi square cutoff'
+                                                       ,min=0
+                                                       ,max=2000
+                                                       #,max=1
                                                        ,value=slidevals$Chi)
                                           ,actionButton('breset'
                                                         ,'Reset Sliders')
