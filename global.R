@@ -15,4 +15,6 @@ slidevals <- list(N=300,OR=1.5
                   );
 # UI text
 source('uitext.R');
+# to override various stuff
+if(file.exists('project_uitext.R')) source('project_uitext.R');
 c()

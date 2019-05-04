@@ -8,7 +8,7 @@ shinyUI(fluidPage(
   tags$head(tags$link(rel="shortcut icon", href="favicon.ico"))
   ,includeCSS('df.css'),useShinyjs(),useShinyalert()
   ,fluidRow(h3("CODEHR: Clinical Open Dashboard for Electronic Health Records")
-              ,tags$em('Urology early adopter alpha edition'))
+              ,tags$em(txtPageSubtitle))
   ,mainPanel(
     width=12,fluidRow(
       column(2
