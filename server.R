@@ -11,27 +11,42 @@ source('functions.R');
 
 
 # ---- Global variables ---- 
-n_all <- 'AllUrolPatients'
-n_groupnames <- c(n_all,'Hispanic','LowIncome');
-dfiles <- c('ALL_HISPANIC.csv','ALL_LOWINCOME.csv');
+dfiles <- 'ALL_HISPANIC.csv';
+#dfiles <- c('ALL_HISPANIC.csv','ALL_LOWINCOME.csv','foo.csv');
 #                          rename from, rename to
-renamepatterns <- rbind(c('ODDS_RATIO','ODDSRATIO')
+chirename <- rbind(c('ODDS_RATIO','OR')
                         # if the left three columns in every data file
                         # are not named precisely 'PREFIX','CCD',and 'NAME'
                         # then each rename pattern should be added as a 
                         # separate row in this part of the script
                         );
+
 totalcode <- 'TOTAL';
 mincountfrac <- 0.01;
 
+renameforplots <- rbind(
+  c('REF','Reference Population')
+  ,c('HISPANIC','Hispanic')
+  ,c('LOWINCOME','Low Income')
+);
+
+# inherit the reference population from above
+refgroupname <- renameforplots[1,2];
+
+# give deployer of this app the option to override any of the above by creating
+# a script named 'project_custom.R'
+if(file.exists('project_custom.R')) source('project_custom.R');
+
 # ---- Default Arguments ----
-formals(quickreshape)[c('groups','other')] <- list(n_groupnames[-1]
-                                                   ,c('Category','NAME'
-                                                      ,paste0('FRC_',n_all)));
-formals(chifilter)[c('groups','sortby')] <- list(n_groupnames[-1],n_all);
+#formals(quickreshape)[c('groups','other')] <- list(n_groupnames[-1]
+                                                   # ,c('Category','NAME'
+                                                   #    ,paste0('FRC_',n_all)));
+#formals(chifilter)[c('groups','sortby')] <- list(n_groupnames[-1],n_all);
 formals(selectcodegrps)$codemap <- demogcodes;
-formals(quickbars)$yy <- paste0('FRC_',n_all);
-formals(quickpoints)$yy <- paste0('FRC_',n_all);
+formals(quickbars)[c('searchrep')] <- list(renameforplots);
+formals(quickpoints)[c('refgroupname','searchrep')] <- list(refgroupname
+                                                            ,renameforplots);
+formals(read_chis)$searchrep <- chirename;
 # ---- Read Data ----
 if('cached_data.rdata' %in% list.files()){
   load('cached_data.rdata');}
@@ -40,44 +55,69 @@ if(!exists('dat')||!exists('dat_totals')){
     stop('The input datafiles are missing. In addition to these scripts, you '
          ,'or whoever is responsible for deploying this webapp also needs to '
          ,'obtain data for it to process.')}
-  dat <- read_chis(dfiles[1],dfiles[2],groupnames=n_groupnames
-                   ,submulti = renamepatterns);
-  dat_totals <- subset(dat,CCD==totalcode);
-  dat <- subset(dat,dat[[n_all]]>mincountfrac*dat_totals[[n_all]]);
+  raw <- if(length(dfiles)>1) Reduce(read_chis,dfiles) else {
+    standardize_chis(dfiles)};
+  dat_totals <- subset(raw,CCD==totalcode);
+  dat <- subset(raw,raw$N_REF>mincountfrac*dat_totals$N_REF);
+  attr(dat,'sectioncols') <- attr(raw,'sectioncols');
   save(dat,dat_totals,file='cached_data.rdata');
 }
 # ---- Test Filtering and Plotting ----
+message('Running test0');
 dat_test0 <- chifilter(dat);
 #dat_test_plot0 <- quickpoints(dat_test0,groups=n_groupnames[-1]);
 #print(dat_test_plot0);
+message('Running test1');
 dat_test1 <- left_join(demogcodes,dat);
 #dat_test_plot1 <- quickpoints(dat_test1,groups = n_groupnames[-1]);
 #print(dat_test_plot1);
 
 # ---- Server ----
+message('Defining shinyServer');
 shinyServer(function(input, output, session) {
   # ---- Server init ----
-  rv <- reactiveValues(rgroups=n_groupnames[-1]
-                       ,rprefix='UTHSCSA|FINCLASS'
-                       ,rshowcols=c('Category','NAME',n_groupnames
-                                    ,paste0('FRC_',n_groupnames))
-                       ,rdat=selectcodegrps(dat,prefix='UTHSCSA|FINCLASS'
-                                            ,groups=n_groupnames[-1])
-                       ,rchicut=200,rncut=300,roddscut=1.5);
+  rv <- reactiveValues(rprefix='UTHSCSA|FINCLASS'
+                       ,rshowcols=c('Category','NAME'
+                                    ,grep('^(N_|FRC_)',names(dat),val=T))
+                       ,rdat=selectcodegrps(dat,prefix='UTHSCSA|FINCLASS')
+                       ,rchicut=200,rncut=300,roddscut=1.5
+                       ,needupdate=0);
+  # ---- Reset ----
+  # allow the user to reset the sliders to their starting values
+  observeEvent(input$breset,{
+    message('Processing reset click');
+    updateSliderInput(session,inputId='slN',value=slidevals$N);
+    updateSliderInput(session,inputId='slChi',value=slidevals$Chi);
+    updateSliderInput(session,inputId='slOR',value=slidevals$OR);
+    message('Clicking update');
+    # Don't know why, but have to programatically click bupdate twice 
+    # to trigger it
+    click('bupdate'); click('bupdate');
+    message('Done with reset click');
+  });
   # ---- Update Button Clicked ----
-  observeEvent(input$bupdate,{
+  observeEvent({input$bupdate;rv$needupdate},{
     message('starting update button click');
     if(length(input$selBasic)==0){
-      updateSelectInput(session,inputId='selBasic',selected=rv$rprefix);
-      #TODO: update the sliders too
-      } else {rv$rprefix <- input$selBasic};
+      updateSelectInput(session,inputId='selBasic',selected=rv$rprefix)};
     message('updating rdat');
-    rv$rncut <- input$slN;
-    rv$rchicut <- input$slChi;
-    rv$roddscut <- input$slOR;
-    rv$rdat <- selectcodegrps(dat,prefix=rv$rprefix,groups=rv$rgroups
-                              ,sortby=n_all,ncutoff=rv$rncut
-                              ,chicutoff=rv$rchicut,oddscutoff=rv$roddscut);
+    rdat <- selectcodegrps(dat,prefix=input$selBasic,ncutoff=input$slN
+                           #,ncutoff=rv$rncut
+                           ,chicutoff=input$slChi,oddscutoff=input$slOR
+                           #,chicutoff=rv$rchicut,oddscutoff=rv$roddscut
+                           );
+    # if the filtering returns a non-null group, update reactive values with
+    # new filtered data and cutoffs
+    if(nrow(rdat)>1){ rv$rdat <- rdat; rv$rncut <- input$slN;
+    rv$rchicut <- input$slChi; rv$roddscut <- input$slOR
+    rv$rprefix <- input$selBasic} else {
+      # otherwise, reset the settings to what they were before the update button
+      # got pressed
+      updateSelectInput(session,inputId='selBasic',selected=rv$rprefix);
+      updateSliderInput(session,inputId='slN',value=rv$rncut);
+      updateSliderInput(session,inputId='slChi',value=rv$rchicut);
+      updateSliderInput(session,inputId='slOR',value=rv$roddscut);
+    };
     message('update button click done');
   });
   # ---- Main Plot ---- 
@@ -86,12 +126,12 @@ shinyServer(function(input, output, session) {
     #rcolrs <- setNames(brewer_pal(type='qua')(length(rv$rgroups)),rv$rgroups);
     #rv$rcolrs <- rcols;
     if(any(rv$rdat$PREFIX %in% subset(demogcodes,is.na(CCD))$PREFIX)){
-      out <- quickpoints(rv$rdat,groups=rv$rgroups,alpha=0.3
+      out <- quickpoints(rv$rdat,alpha=0.3
                          ,targetodds=rv$roddscut) + 
         theme(plot.margin=margin(15,15,30,20),aspect.ratio=1);
       txtMainVar <- txtMainVarDynamic;
     } else {
-      out <- quickbars(rv$rdat,groups=rv$rgroups) +
+      out <- quickbars(rv$rdat) +
         theme(axis.text.x=element_text(angle=30)
               ,plot.margin = margin(30,30,60,40));
       txtMainVar <- txtMainVarStatic;
