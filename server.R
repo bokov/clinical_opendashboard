@@ -12,7 +12,8 @@ source('functions.R');
 
 # ---- Global variables ---- 
 #dfiles <- 'ALL_HISPANIC.csv';
-dfiles <- c('ALL_HISPANIC.csv','ALL_LOWINCOME.csv','foo.csv');
+dfiles <- c('ALL_HISPANIC.csv','ALL_LOWINCOME.csv') #,'foo.csv');
+#dfiles <- c('KC_NO_RM.csv','KC_RM.csv');
 #                          rename from, rename to
 chirename <- rbind(c('ODDS_RATIO','OR')
                         # if the left three columns in every data file
