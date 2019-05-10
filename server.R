@@ -13,7 +13,6 @@ source('functions.R');
 # ---- Global variables ---- 
 #dfiles <- 'ALL_HISPANIC.csv';
 dfiles <- c('ALL_HISPANIC.csv','ALL_LOWINCOME.csv') #,'foo.csv');
-#dfiles <- c('KC_NO_RM.csv','KC_RM.csv');
 #                          rename from, rename to
 chirename <- rbind(c('ODDS_RATIO','OR')
                         # if the left three columns in every data file
@@ -153,7 +152,8 @@ shinyServer(function(input, output, session) {
   # ---- Table of Selected Data ----
   output$tblsel <- renderDataTable({
     dd <- (rv$rdat[,names(rv$rdat) %in% rv$rshowcols]) %>% 
-      bind_rows(dat_totals[,intersect(names(.),names(dat_totals))]);
+      bind_rows(dat_totals[,intersect(names(.),names(dat_totals))]) %>%
+      setNames(.,submulti(names(.),renameforplots))
     message('renderDataTable Done!'); dd;}
     ,extensions = c('Buttons', 'Scroller')
     ,autoHideNavigation=T,rownames=F,fillContainer=T
