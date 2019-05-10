@@ -35,7 +35,7 @@ refgroupname <- renameforplots[1,2];
 
 # give deployer of this app the option to override any of the above by creating
 # a script named 'project_custom.R'
-if(file.exists('project_custom.R')) source('project_custom.R');
+if(file.exists('project_custom.R')) source('project_custom.R',local = T);
 
 # ---- Default Arguments ----
 #formals(quickreshape)[c('groups','other')] <- list(n_groupnames[-1]
@@ -128,8 +128,6 @@ shinyServer(function(input, output, session) {
   # ---- Main Plot ---- 
   output$plotmain <- renderPlotly({
     message('About to render main plot');
-    #rcolrs <- setNames(brewer_pal(type='qua')(length(rv$rgroups)),rv$rgroups);
-    #rv$rcolrs <- rcols;
     if(any(rv$rdat$PREFIX %in% subset(demogcodes,is.na(CCD))$PREFIX)){
       out <- quickpoints(rv$rdat,alpha=0.3
                          ,targetodds=rv$roddscut) + 

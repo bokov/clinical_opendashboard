@@ -2,7 +2,8 @@
 if(dir.exists('R-lib')) .libPaths(c(normalizePath('R-lib'),.libPaths()));
 library(readr);
 # selected prefixes and concept codes 
-demogcodes <- read_csv('demogcodes.csv');
+demogcodes <- if(file.exists('demogcodes.csv')){
+  read_csv('demogcodes.csv')} else {read_csv('demogcodes_demo.csv')};
 # demogcodes should include the following columns: 'PREFIX','Category','CCD'
 # PREFIX and CCD are the same as used by ChinoType. Category is a human-readable
 # version of PREFIX.
