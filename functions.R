@@ -257,6 +257,8 @@ selectcodegrps <- function(data,codemap
   oo;
 }
 
+dimnames.datatables <- function(xx) {dimnames(xx$x$data)};
+
 # ---- Visualization ----
 quickbars <- function(data,labels='NAME',colprefix='FRC_'
                       ,yy='FRC_REF',searchrep=c()

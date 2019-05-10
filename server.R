@@ -151,15 +151,17 @@ shinyServer(function(input, output, session) {
   output$tblsel <- renderDataTable({
     dd <- (rv$rdat[,names(rv$rdat) %in% rv$rshowcols]) %>% 
       bind_rows(dat_totals[,intersect(names(.),names(dat_totals))]) %>%
-      setNames(.,submulti(names(.),renameforplots))
-    message('renderDataTable Done!'); dd;}
-    ,extensions = c('Buttons', 'Scroller')
-    ,autoHideNavigation=T,rownames=F,fillContainer=T
-    ,options=list(processing=T,searching=F,scroller=T
-                  ,scrollx='100%',scrolly='20vh'
-                  #,scroller=T,scrollx=T,scrolly=T
-                  ,dom='Bfrtip',buttons=c('copy','csv','excel','print'))
-  );
+      setNames(.,submulti(names(.),renameforplots)) %>% 
+      DT::datatable(extensions = c('Buttons', 'Scroller')
+                    ,autoHideNavigation=T,rownames=F,fillContainer=T
+                    ,options=list(processing=T,searching=F,scroller=T
+                                  ,scrollx='100%',scrolly='20vh'
+                                  ,dom='Bfrtip'
+                                  ,buttons=c('copy','csv','excel','print'))
+                    ) %>% 
+      DT::formatPercentage(.,grep('^FRC_',dimnames(.)[[2]]),digits=2)
+    #message('renderDataTable Done!'); dd;
+    });
   
   # ---- Debug ----
   observeEvent(input$bdebug,{
