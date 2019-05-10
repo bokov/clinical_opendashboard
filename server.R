@@ -36,7 +36,7 @@ refgroupname <- renameforplots[1,2];
 
 # give deployer of this app the option to override any of the above by creating
 # a script named 'project_custom.R'
-if(file.exists('project_custom.R')) source('project_custom.R');
+if(file.exists('project_custom.R')) source('project_custom.R',local = T);
 
 # ---- Default Arguments ----
 #formals(quickreshape)[c('groups','other')] <- list(n_groupnames[-1]
