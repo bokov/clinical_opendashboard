@@ -84,7 +84,8 @@ shinyServer(function(input, output, session) {
                                     ,grep('^(N_|FRC_)',names(dat),val=T))
                        ,rdat=selectcodegrps(dat,prefix='UTHSCSA|FINCLASS')
                        ,rchicut=slidevals$Chi
-                       ,rncut=slidevals$N,roddscut=slidevals$OR);
+                       ,rncut=slidevals$N,roddscut=slidevals$OR
+                       ,log=list());
   message('One-time clicking bupdate on init...');
   click('breset');
   # ---- Reset ----
@@ -143,10 +144,12 @@ shinyServer(function(input, output, session) {
                       ,method='exact') %>% unlist %>% paste0(collapse=', ');
     output$maintext <- renderText(sprintf(paste(txtMainVarCommon,txtMainVar)
                                           ,title));
+    #rv$currentplot <- out;
 
     ggplotly(out + ggtitle(title)
              ,tooltip='text');
   });
+  
   # ---- Table of Selected Data ----
   output$tblsel <- renderDataTable({
     dd <- (rv$rdat[,names(rv$rdat) %in% rv$rshowcols]) %>% 
@@ -162,7 +165,20 @@ shinyServer(function(input, output, session) {
       DT::formatPercentage(.,grep('^FRC_',dimnames(.)[[2]]),digits=2)
     #message('renderDataTable Done!'); dd;
     });
+  # ---- Logging ----
+  observe({
+    if(file.exists('applog.csv')){
+      logentry <- c(reactiveValuesToList(input)
+                    ,time=as.character(Sys.time())
+                    ,ip=session$request$REMOTE_ADDR
+                    ,agent=session$request$HTTP_USER_AGENT
+                    ,token=session$token);
+      logentry <- data.frame(rbind(logentry[!sapply(logentry, is.null)]));
+      isolate(rv$log[[length(rv$log)+1]]<-logentry);
+    }
+  });
   
+  endsession <- session$onSessionEnded(function() writeLog(rv));
   # ---- Debug ----
   observeEvent(input$bdebug,{
     browser();
