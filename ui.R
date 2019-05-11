@@ -21,7 +21,7 @@ shinyUI(fluidPage(
                                                 ,' to compare.')
                                           ,selectInput('selBasic',''
                                                        ,selBasicChoices[-1]
-                                                       ,selected = 'UTHSCSA|FINCLASS' 
+                                                       ,selected = selBasicDefault
                                                        #,multiple=T
                                                        )
                                           )
