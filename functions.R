@@ -257,6 +257,16 @@ selectcodegrps <- function(data,codemap
   oo;
 }
 
+dimnames.datatables <- function(xx) {dimnames(xx$x$data)};
+
+writeLog <- function(rv=list(),outfile='applog.csv'){
+  log <- isolate(rv$log);
+  if(file.exists(outfile) && length(log)>0){
+    out <- bind_rows(log) %>% sapply(as.character) %>% data.frame;
+    write_tsv(out,outfile,append=T,col_names = T);
+  }
+}
+
 # ---- Visualization ----
 quickbars <- function(data,labels='NAME',colprefix='FRC_'
                       ,yy='FRC_REF',searchrep=c()

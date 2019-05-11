@@ -13,7 +13,6 @@ source('functions.R');
 # ---- Global variables ---- 
 #dfiles <- 'ALL_HISPANIC.csv';
 dfiles <- c('ALL_HISPANIC.csv','ALL_LOWINCOME.csv') #,'foo.csv');
-#dfiles <- c('KC_NO_RM.csv','KC_RM.csv');
 #                          rename from, rename to
 chirename <- rbind(c('ODDS_RATIO','OR')
                         # if the left three columns in every data file
@@ -85,7 +84,8 @@ shinyServer(function(input, output, session) {
                                     ,grep('^(N_|FRC_)',names(dat),val=T))
                        ,rdat=selectcodegrps(dat,prefix='UTHSCSA|FINCLASS')
                        ,rchicut=slidevals$Chi
-                       ,rncut=slidevals$N,roddscut=slidevals$OR);
+                       ,rncut=slidevals$N,roddscut=slidevals$OR
+                       ,log=list());
   message('One-time clicking bupdate on init...');
   click('breset');
   # ---- Reset ----
@@ -144,23 +144,41 @@ shinyServer(function(input, output, session) {
                       ,method='exact') %>% unlist %>% paste0(collapse=', ');
     output$maintext <- renderText(sprintf(paste(txtMainVarCommon,txtMainVar)
                                           ,title));
+    #rv$currentplot <- out;
 
     ggplotly(out + ggtitle(title)
              ,tooltip='text');
   });
+  
   # ---- Table of Selected Data ----
   output$tblsel <- renderDataTable({
     dd <- (rv$rdat[,names(rv$rdat) %in% rv$rshowcols]) %>% 
-      bind_rows(dat_totals[,intersect(names(.),names(dat_totals))]);
-    message('renderDataTable Done!'); dd;}
-    ,extensions = c('Buttons', 'Scroller')
-    ,autoHideNavigation=T,rownames=F,fillContainer=T
-    ,options=list(processing=T,searching=F,scroller=T
-                  ,scrollx='100%',scrolly='20vh'
-                  #,scroller=T,scrollx=T,scrolly=T
-                  ,dom='Bfrtip',buttons=c('copy','csv','excel','print'))
-  );
+      bind_rows(dat_totals[,intersect(names(.),names(dat_totals))]) %>%
+      setNames(.,submulti(names(.),renameforplots)) %>% 
+      DT::datatable(extensions = c('Buttons', 'Scroller')
+                    ,autoHideNavigation=T,rownames=F,fillContainer=T
+                    ,options=list(processing=T,searching=F,scroller=T
+                                  ,scrollx='100%',scrolly='20vh'
+                                  ,dom='Bfrtip'
+                                  ,buttons=c('copy','csv','excel','print'))
+                    ) %>% 
+      DT::formatPercentage(.,grep('^FRC_',dimnames(.)[[2]]),digits=2)
+    #message('renderDataTable Done!'); dd;
+    });
+  # ---- Logging ----
+  observe({
+    if(file.exists('applog.csv')){
+      logentry <- c(reactiveValuesToList(input)
+                    ,time=as.character(Sys.time())
+                    ,ip=session$request$REMOTE_ADDR
+                    ,agent=session$request$HTTP_USER_AGENT
+                    ,token=session$token);
+      logentry <- data.frame(rbind(logentry[!sapply(logentry, is.null)]));
+      isolate(rv$log[[length(rv$log)+1]]<-logentry);
+    }
+  });
   
+  endsession <- session$onSessionEnded(function() writeLog(rv));
   # ---- Debug ----
   observeEvent(input$bdebug,{
     browser();

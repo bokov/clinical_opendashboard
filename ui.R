@@ -2,7 +2,9 @@ library(shinyjs); library(shinyalert); library(shinyBS); library(plotly);
 library(DT);
 
 options(shiny.maxRequestSize=50*1024^2);
-
+# apparently in some environments loading this from global.R doesn't reach here
+# or doesn't reach here immediately
+if(file.exists('project_uitext.R')) source('project_uitext.R');
 
 shinyUI(fluidPage(
   tags$head(tags$link(rel="shortcut icon", href="favicon.ico"))
@@ -21,7 +23,7 @@ shinyUI(fluidPage(
                                                 ,' to compare.')
                                           ,selectInput('selBasic',''
                                                        ,selBasicChoices[-1]
-                                                       ,selected = 'UTHSCSA|FINCLASS' 
+                                                       ,selected = selBasicDefault
                                                        #,multiple=T
                                                        )
                                           )
@@ -46,7 +48,7 @@ shinyUI(fluidPage(
                                                         ,'Reset Sliders')
                                           )
                          )
-             ,actionButton('bupdate','Update')
+             ,actionButton('bupdate','Update plot and counts')
              ,if(file.exists('.debug')) actionButton('bdebug','Debug') else c()
              )
       ,column(10,textOutput('maintext'),br()
