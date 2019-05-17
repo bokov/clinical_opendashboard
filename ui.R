@@ -60,7 +60,7 @@ shinyUI(fluidPage(
                                                         ,'Reset Sliders')
                                           )
                          )
-             ,actionButton('bupdate','Update plot and counts')
+             ,hidden(actionButton('bupdate','Update plot and counts'))
              ,if(file.exists('.debug')) actionButton('bdebug','Debug') else c()
              )
       ,column(10,textOutput('maintext'),br()
