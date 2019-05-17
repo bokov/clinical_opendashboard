@@ -65,24 +65,15 @@ if(!exists('dat')||!exists('dat_totals')){
 # adapt slidevals sample size default based on smallest cohort size
 slidevals$N <- round(min(dat_totals[,grep('^N_',names(dat_totals))]) * 
                        mincountfrac);
-# ---- Test Filtering and Plotting ----
-message('Running test0');
-dat_test0 <- chifilter(dat);
-#dat_test_plot0 <- quickpoints(dat_test0,groups=n_groupnames[-1]);
-#print(dat_test_plot0);
-message('Running test1');
-dat_test1 <- left_join(demogcodes,dat);
-#dat_test_plot1 <- quickpoints(dat_test1,groups = n_groupnames[-1]);
-#print(dat_test_plot1);
 
 # ---- Server ----
 message('Defining shinyServer');
 shinyServer(function(input, output, session) {
   # ---- Server init ----
-  rv <- reactiveValues(rprefix='UTHSCSA|FINCLASS'
+  rv <- reactiveValues(rprefix=selBasicDefault
                        ,rshowcols=c('Category','NAME'
                                     ,grep('^(N_|FRC_)',names(dat),val=T))
-                       ,rdat=selectcodegrps(dat,prefix='UTHSCSA|FINCLASS')
+                       ,rdat=selectcodegrps(dat,prefix=selBasicDefault)
                        ,rchicut=slidevals$Chi
                        ,rncut=slidevals$N,roddscut=slidevals$OR
                        ,log=list());
@@ -108,9 +99,7 @@ shinyServer(function(input, output, session) {
       updateSelectInput(session,inputId='selBasic',selected=rv$rprefix)};
     message('updating rdat');
     rdat <- selectcodegrps(dat,prefix=input$selBasic,ncutoff=input$slN
-                           #,ncutoff=rv$rncut
                            ,chicutoff=input$slChi,oddscutoff=input$slOR
-                           #,chicutoff=rv$rchicut,oddscutoff=rv$roddscut
                            );
     # if the filtering returns a non-null group, update reactive values with
     # new filtered data and cutoffs
@@ -119,6 +108,8 @@ shinyServer(function(input, output, session) {
     rv$rprefix <- input$selBasic} else {
       # otherwise, reset the settings to what they were before the update button
       # got pressed
+      showNotification('No results match criteria, restoring previous ones.'
+                       ,type='error');
       updateSelectInput(session,inputId='selBasic',selected=rv$rprefix);
       updateSliderInput(session,inputId='slN',value=rv$rncut);
       updateSliderInput(session,inputId='slChi',value=rv$rchicut);
@@ -129,7 +120,8 @@ shinyServer(function(input, output, session) {
   # ---- Main Plot ---- 
   output$plotmain <- renderPlotly({
     message('About to render main plot');
-    if(any(rv$rdat$PREFIX %in% subset(demogcodes,is.na(CCD))$PREFIX)){
+    # prefixpoints defined in global.R, using demogcodes
+    if(any(rv$rdat$PREFIX %in% prefixpoints)){
       out <- quickpoints(rv$rdat,alpha=0.3
                          ,targetodds=rv$roddscut) + 
         theme(plot.margin=margin(15,15,30,20),aspect.ratio=1);
@@ -140,7 +132,8 @@ shinyServer(function(input, output, session) {
               ,plot.margin = margin(30,30,60,40));
       txtMainVar <- txtMainVarStatic;
     }
-    title <- submulti(rv$rprefix,unique(demogcodes[,c('PREFIX','Category')])
+    title <- submulti(isolate(rv$rprefix)
+                      ,unique(demogcodes[,c('PREFIX','Category')])
                       ,method='exact') %>% unlist %>% paste0(collapse=', ');
     output$maintext <- renderText(sprintf(paste(txtMainVarCommon,txtMainVar)
                                           ,title));
@@ -165,6 +158,20 @@ shinyServer(function(input, output, session) {
       DT::formatPercentage(.,grep('^FRC_',dimnames(.)[[2]]),digits=2)
     #message('renderDataTable Done!'); dd;
     });
+  # ---- Disable or Enable Advanced Filters ----
+  observeEvent(input$selBasic,{
+    if(input$selBasic %in% prefixpoints) {
+      show(selector=".panel[value='Advanced']");
+      #enable(selector=".panel[value='Advanced']>div.panel-heading>
+      #        .panel-title>.collapsed");
+      showNotification('Advanced filters available for this data element')
+      } else {
+        hide(selector=".panel[value='Advanced']");
+        #updateCollapse(session,'filters',close='Advanced');
+      #disable(selector=".panel[value='Advanced']>div.panel-heading>
+      #      .panel-title>.collapsed");
+    }
+  });
   # ---- Logging ----
   observe({
     if(file.exists('applog.csv')){
