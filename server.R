@@ -63,22 +63,28 @@ if(!exists('dat')||!exists('dat_totals')){
   save(dat,dat_totals,file='cached_data.rdata');
 }
 # adapt slidevals sample size default based on smallest cohort size
-slidevals$N <- round(min(dat_totals[,grep('^N_',names(dat_totals))]) * 
-                       mincountfrac);
+.GlobalEnv$slidevals$N <- round(min(dat_totals[
+  ,grep('^N_',names(dat_totals))]) * mincountfrac);
 
 # ---- Server ----
 message('Defining shinyServer');
 shinyServer(function(input, output, session) {
   # ---- Server init ----
-  rv <- reactiveValues(rprefix=selBasicDefault
+  rv <- reactiveValues(rprefix=.GlobalEnv$selBasicDefault
                        ,rshowcols=c('Category','NAME'
                                     ,grep('^(N_|FRC_)',names(dat),val=T))
-                       ,rdat=selectcodegrps(dat,prefix=selBasicDefault)
+                       ,rdat=selectcodegrps(dat
+                                            ,prefix=.GlobalEnv$selBasicDefault)
                        ,rchicut=slidevals$Chi
                        ,rncut=slidevals$N,roddscut=slidevals$OR
+                       ,starting=T
                        ,log=list());
-  message('One-time clicking bupdate on init...');
-  click('breset');
+  observe({
+    updateSelectInput(session,inputId='selBasic',selected=rv$rprefix);
+    });
+  hide('bupdate');
+  #message('One-time clicking bupdate on init...');
+  #click('breset');
   # ---- Reset ----
   # allow the user to reset the sliders to their starting values
   observeEvent(input$breset,{
@@ -89,9 +95,27 @@ shinyServer(function(input, output, session) {
     message('Clicking update');
     # Don't know why, but have to programatically click bupdate twice 
     # to trigger it
-    click('bupdate'); click('bupdate');
+    #click('bupdate'); click('bupdate');
     message('Done with reset click');
   });
+  # ---- Hide/Show Update Button
+  observeEvent({input$selBasic;input$slChi;input$slOR; input$slN;}
+               ,if(rv$starting) {
+                 rv$starting <- F; hide('bupdate'); 
+                 message('\n HIDING UPDATE DUE TO STARTUP');
+                 } else {
+                 if(input$selBasic != rv$rprefix ||
+                    input$slChi != rv$rchicut ||
+                    input$slN != rv$rncut ||
+                    input$slOR != rv$roddscut) {
+                   show('bupdate'); 
+                   message('\n SHOWING UPDATE');
+                   } else {
+                     hide('bupdate');
+                     message('\n HIDING UPDATE');
+                   }
+                   }
+               );
   # ---- Update Button Clicked ----
   observeEvent({input$bupdate},{
     message('starting update button click');
@@ -115,6 +139,7 @@ shinyServer(function(input, output, session) {
       updateSliderInput(session,inputId='slChi',value=rv$rchicut);
       updateSliderInput(session,inputId='slOR',value=rv$roddscut);
     };
+    hide('bupdate');
     message('update button click done');
   });
   # ---- Main Plot ---- 
@@ -185,7 +210,14 @@ shinyServer(function(input, output, session) {
     }
   });
   
-  endsession <- session$onSessionEnded(function() writeLog(rv));
+  endsession <- session$onSessionEnded(function() {
+    message('\n\n*** Closing session');
+    #browser();
+    writeLog(rv);
+    message('\n\n*** Done logging');
+    #click('breset'); click('bupdate');
+    #message('Done resetting');
+  });
   # ---- Debug ----
   observeEvent(input$bdebug,{
     browser();
