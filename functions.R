@@ -255,7 +255,7 @@ selectcodegrps <- function(data,codemap
   # return static and then dynamically selected variables
   oo <- rbind(oost,oodn);
   .dbg <- try(attr(oo,'sectioncols') <- attr(data,'sectioncols'));
-  if(is(.dbg,'try-error')) browser();
+  #if(is(.dbg,'try-error')) browser();
   oo;
 }
 
