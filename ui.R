@@ -9,6 +9,7 @@ if(file.exists('project_uitext.R')) source('project_uitext.R');
 shinyUI(fluidPage(
   tags$head(tags$link(rel="shortcut icon", href="favicon.ico"))
   ,includeCSS('df.css'),useShinyjs(),useShinyalert()
+  #,tags$script(src = "codehr.js")
   ,fluidRow(h3("CODEHR: Clinical Open Dashboard for Electronic Health Records")
               ,tags$em(txtPageSubtitle))
   ,mainPanel(
@@ -29,21 +30,32 @@ shinyUI(fluidPage(
                                           )
                          ,bsCollapsePanel(title=span("Advanced"
                                                       ,icon('angle-down'))
+                                          ,value="Advanced"
                                           ,sliderInput('slN','Count cutoff'
                                                        ,min=50,max=2000
                                                        ,value=slidevals$N
                                                        ,step = 1)
+                                          ,hr()
                                           ,sliderInput('slOR'
                                                        ,'Odds ratio cutoff'
                                                        ,min=1.1,max=4
                                                        ,value=slidevals$OR
                                                        ,step=0.01)
-                                          ,sliderInput('slChi'
-                                                       ,'Chi square cutoff'
-                                                       ,min=0
-                                                       ,max=2000
-                                                       #,max=1
-                                                       ,value=slidevals$Chi)
+                                          ,hr()
+                                          ,numericInput('slChi'
+                                                        ,'False Discovery Rate'
+                                                        ,min=0
+                                                        ,max=1
+                                                        ,step=0.01
+                                                        ,value=slidevals$Chi)
+                                          # ,sliderInput('slChi'
+                                          #              ,'Chi square cutoff'
+                                          #              ,min=.Machine$double.eps
+                                          #              #,max=2000
+                                          #              ,max=0.3
+                                          #              ,step=0.00001
+                                          #              ,value=slidevals$Chi)
+                                          ,hr()
                                           ,actionButton('breset'
                                                         ,'Reset Sliders')
                                           )
