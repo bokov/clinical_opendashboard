@@ -177,7 +177,9 @@ quickreshape <- function(data,pattern=c('FRC_%s')
                  ,timevar=timevar);
 }
 
-chifilter <- function(data,ncutoff=300,chicutoff=200,oddscutoff=1.5
+chifilter <- function(data,ncutoff=300
+                      ,chicutoff=0.05 #200
+                      ,oddscutoff=1.5
                       ,npattern='N_%1$s',chipattern='CHISQ_%1$s'
                       # other is where to put additional filter terms
                       # start them with '& '
@@ -191,8 +193,8 @@ chifilter <- function(data,ncutoff=300,chicutoff=200,oddscutoff=1.5
       warning("It is recommended you not manually specify the 'groups'"
               ,"argument. If you encounter an error, check there first.")};
   template <- paste('(',npattern,'>',ncutoff
-                    #,'& p.adjust(pchisq(',chipattern,',df=1,lower=F),"fdr")<'
-                    ,'& ',chipattern,'>'
+                    ,'& p.adjust(pchisq(',chipattern,',df=1,lower=F),"fdr")<'
+                    #,'& ',chipattern,'>'
                     ,chicutoff
                     ,'&','abs(log(',oddspattern,'))','>',abs(log(oddscutoff))
                     ,other,')');
@@ -253,7 +255,7 @@ selectcodegrps <- function(data,codemap
   # return static and then dynamically selected variables
   oo <- rbind(oost,oodn);
   .dbg <- try(attr(oo,'sectioncols') <- attr(data,'sectioncols'));
-  if(is(.dbg,'try-error')) browser();
+  #if(is(.dbg,'try-error')) browser();
   oo;
 }
 
