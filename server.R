@@ -55,6 +55,11 @@ if(!exists('dat')||!exists('dat_totals')){
     stop('The input datafiles are missing. In addition to these scripts, you '
          ,'or whoever is responsible for deploying this webapp also needs to '
          ,'obtain data for it to process.')}
+  # Note: here is sed code for removing doubled quotes that could be
+  # output by current chinotype:
+  # sed -i 's/"\([^"]*\)"",/\1",/g' FILE.csv 
+  # sed -i 's/,""\([^"]*\)"/,"\1/g' FILE.csv 
+  
   raw <- if(length(dfiles)>1) Reduce(read_chis,dfiles) else {
     standardize_chis(dfiles)};
   dat_totals <- subset(raw,CCD==totalcode);
