@@ -22,6 +22,10 @@ chirename <- rbind(c('ODDS_RATIO','OR')
                         );
 
 totalcode <- 'TOTAL';
+# mincount deliberately high to trigger dynamic setting of count threshold. If 
+# you want a static threshold, override mincount in project_custom.R created in
+# the same directory as this script
+mincount <- 1e6; 
 mincountfrac <- 0.01;
 
 renameforplots <- rbind(
@@ -63,8 +67,21 @@ if(!exists('dat')||!exists('dat_totals')){
   raw <- if(length(dfiles)>1) Reduce(read_chis,dfiles) else {
     standardize_chis(dfiles)};
   dat_totals <- subset(raw,CCD==totalcode);
-  dat <- subset(raw,raw$N_REF>mincountfrac*dat_totals$N_REF);
+  # separately filter out the inherently near-empty variables
+  if(mincount > dat_totals$N_REF){
+    mincount <- mincountfrac*dat_totals$N_REF;
+    warning(sprintf(
+      "The 'mincount' variable set too high, setting to %0.2f instead"
+      ,mincount));
+    }
+  dat <- subset(raw, N_REF > mincount);
   attr(dat,'sectioncols') <- attr(raw,'sectioncols');
+  # This way, in project_custom.R can specify a different prefilter object
+  dat <- chifilter(dat,ncutoff=prefilter$N,chicutoff=prefilter$Chi
+                   ,oddscutoff=prefilter$OR
+                   # this part is so that we don't drop the static ("bar plot")
+                   # values that fail to meet cutoffs
+                   ,global_other = ' PREFIX %in% prefixbars ');
   save(dat,dat_totals,file='cached_data.rdata');
 }
 # adapt slidevals sample size default based on smallest cohort size
