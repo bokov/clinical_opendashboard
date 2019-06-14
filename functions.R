@@ -187,6 +187,7 @@ chifilter <- function(data,ncutoff=300
                       # sortby is the variable by which the output will be 
                       # sorted, in descending order
                       ,varclass='PREFIX',sortby='N_REF',other=''
+                      ,global_other='FALSE'
                       ,groups,...){
   if(missing(groups)){
     groups <- setdiff(names(attr(data,'sectioncols')),c('Info','REF'))} else {
@@ -200,7 +201,7 @@ chifilter <- function(data,ncutoff=300
                     ,other,')');
   filter <- paste(sapply(groups,function(xx) sprintf(template,xx))
                   ,collapse='|');
-  out <- subset(data,eval(parse(text=filter)));
+  out <- subset(data,eval(parse(text=filter))|eval(parse(text=global_other)));
   attr(out,'sectioncols') <- attr(data,'sectioncols');
   if(!varclass %in% names(out)){
     varclass <- '';
