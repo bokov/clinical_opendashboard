@@ -48,6 +48,8 @@ shinyUI(fluidPage(
                                                         ,max=1
                                                         ,step=0.01
                                                         ,value=slidevals$Chi)
+                                          ,checkboxInput('chChi'
+                                                         ,'Hide non significant')
                                           # ,sliderInput('slChi'
                                           #              ,'Chi square cutoff'
                                           #              ,min=.Machine$double.eps
