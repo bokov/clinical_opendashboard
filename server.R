@@ -98,6 +98,7 @@ shinyServer(function(input, output, session) {
                        ,rdat=selectcodegrps(dat
                                             ,prefix=.GlobalEnv$selBasicDefault)
                        ,rchicut=slidevals$Chi
+                       ,rchihide=F
                        ,rncut=slidevals$N,roddscut=slidevals$OR
                        ,starting=T
                        ,log=list());
@@ -121,23 +122,22 @@ shinyServer(function(input, output, session) {
     message('Done with reset click');
   });
   # ---- Hide/Show Update Button
-  observeEvent({input$selBasic;input$slChi;input$slOR; input$slN;}
-               ,if(rv$starting) {
-                 rv$starting <- F; hide('bupdate'); 
-                 message('\n HIDING UPDATE DUE TO STARTUP');
-                 } else {
-                 if(input$selBasic != rv$rprefix ||
-                    input$slChi != rv$rchicut ||
-                    input$slN != rv$rncut ||
-                    input$slOR != rv$roddscut) {
-                   show('bupdate'); 
-                   message('\n SHOWING UPDATE');
-                   } else {
-                     hide('bupdate');
-                     message('\n HIDING UPDATE');
-                   }
-                   }
-               );
+  observeEvent({input$selBasic;input$slChi;input$slOR; input$slN;
+    input$chChi;}
+    ,if(rv$starting) {
+      rv$starting <- F; hide('bupdate'); 
+      message('\n HIDING UPDATE DUE TO STARTUP')} else {
+        if(input$selBasic != rv$rprefix || input$slChi != rv$rchicut ||
+           input$slN != rv$rncut || input$slOR != rv$roddscut ||
+           input$chChi != rv$rchihide) {
+          show('bupdate'); 
+          message('\n SHOWING UPDATE');
+          } else {
+            hide('bupdate');
+            message('\n HIDING UPDATE');
+          }
+        }
+    );
   # ---- Update Button Clicked ----
   observeEvent({input$bupdate},{
     message('starting update button click');
@@ -147,11 +147,19 @@ shinyServer(function(input, output, session) {
     rdat <- selectcodegrps(dat,prefix=input$selBasic,ncutoff=input$slN
                            ,chicutoff=input$slChi,oddscutoff=input$slOR
                            );
+    if(input$chChi){
+      for(ii in grep('^CHISQ_',names(rdat),val=T)){
+        message('NAs before:',sum(is.na(rdat[[ii]])));
+        rdat[[ii]] <- ifelse(p.adjust(pchisq(rdat[[ii]],df=1,lower=F)
+                                      ,'fdr')<input$slChi,rdat[[ii]],NA)
+        message('NAs after:',sum(is.na(rdat[[ii]])))
+        }
+      };
     # if the filtering returns a non-null group, update reactive values with
     # new filtered data and cutoffs
     if(nrow(rdat)>1){ rv$rdat <- rdat; rv$rncut <- input$slN;
-    rv$rchicut <- input$slChi; rv$roddscut <- input$slOR
-    rv$rprefix <- input$selBasic} else {
+    rv$rchicut <- input$slChi; rv$roddscut <- input$slOR;
+    rv$rprefix <- input$selBasic; rv$rchihide <- input$chChi; } else {
       # otherwise, reset the settings to what they were before the update button
       # got pressed
       showNotification('No results match criteria, restoring previous ones.'
