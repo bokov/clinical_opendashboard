@@ -1,5 +1,10 @@
 # for environments needing user-space packages
 if(dir.exists('R-lib')) .libPaths(c(normalizePath('R-lib'),.libPaths()));
+#library(data.table); # attempting to force update of data.table
+.packagedebug <- try(if(R.version$major>=3 && R.version$minor >= 6 && 
+   packageVersion('data.table')<'1.11.2'){
+  install.packages('data.table',repos='https://cloud.r-project.org')});
+if(is(.packagedebug,'try-error')) warning(.packagedebug);
 library(readr); library(shinyTree);
 # selected prefixes and concept codes 
 demogcodes <- if(file.exists('demogcodes.csv')){
