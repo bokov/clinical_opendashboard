@@ -240,6 +240,15 @@ shinyServer(function(input, output, session) {
   observeEvent(input$bdebug,{
     browser();
     });
+  
+  # permanently disable debug button and system info panel by 
+  # deleting the files that signal that they should be enabled
+  observeEvent(input$brmdebug,{
+    file.remove('.debug','remote_debug');
+    removeUI('#bdebug');
+    removeUI('#debuginfo');
+    message('Removed debug functionality');
+  });
 });
 
 c()
