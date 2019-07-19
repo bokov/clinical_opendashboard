@@ -1,6 +1,6 @@
 # for environments needing user-space packages
 if(dir.exists('R-lib')) .libPaths(c(normalizePath('R-lib'),.libPaths()));
-library(readr);
+library(readr); library(shinyTree);
 # selected prefixes and concept codes 
 demogcodes <- if(file.exists('demogcodes.csv')){
   read_csv('demogcodes.csv')} else {read_csv('demogcodes_demo.csv')};

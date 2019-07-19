@@ -83,11 +83,14 @@ shinyServer(function(input, output, session) {
                        ,rchicut=slidevals$Chi
                        ,rncut=slidevals$N,roddscut=slidevals$OR
                        ,starting=T
+                       ,rsysinfo=unclass(c(Sys.info(),sessionInfo()))
                        ,log=list());
   observe({
     updateSelectInput(session,inputId='selBasic',selected=rv$rprefix);
     });
   hide('bupdate');
+  # ---- System/Session Info ----
+  output$trSysinfo <- renderTree(rv$rsysinfo);
   #message('One-time clicking bupdate on init...');
   #click('breset');
   # ---- Reset ----
@@ -224,6 +227,16 @@ shinyServer(function(input, output, session) {
     #message('Done resetting');
   });
   # ---- Debug ----
+  # print system info about remote instance
+  observeEvent(c(input$trSysinfo,rv$rsysinfo),{
+    output$strSysinfo <- renderPrint(lapply(get_selected(input$trSysinfo)
+                                            ,function(xx){
+                                              c(attr(xx,'ancestry'),xx)}) %>% 
+                                       lapply(function(xx){
+                                         setNames(list(`[[`(rv$rsysinfo,xx))
+                                                  ,paste(xx,collapse='$'))}) %>%
+                                       Reduce(c,.))});
+  # drop into interactive debug on local instance
   observeEvent(input$bdebug,{
     browser();
     });
