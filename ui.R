@@ -70,6 +70,12 @@ shinyUI(fluidPage(
                          ,bsCollapsePanel(span("Counts and percentages"
                                                ,icon('angle-down'))
                                           ,dataTableOutput('tblsel'))))
+    ,if(any(file.exists('remote_debug','.debug'))){
+      fluidRow(bsCollapse(id="systeminfo"
+                          ,bsCollapsePanel(span("System Info"
+                                                ,icon('angle-down'))
+                                           ,verbatimTextOutput('strSysinfo')
+                                           ,shinyTree('trSysinfo'))))}
     )
   )
   );
