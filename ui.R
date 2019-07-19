@@ -71,11 +71,12 @@ shinyUI(fluidPage(
                                                ,icon('angle-down'))
                                           ,dataTableOutput('tblsel'))))
     ,if(any(file.exists('remote_debug','.debug'))){
-      fluidRow(bsCollapse(id="systeminfo"
+      fluidRow(id='debuginfo',bsCollapse(id="systeminfo"
                           ,bsCollapsePanel(span("System Info"
                                                 ,icon('angle-down'))
                                            ,verbatimTextOutput('strSysinfo')
-                                           ,shinyTree('trSysinfo'))))}
+                                           ,shinyTree('trSysinfo')))
+               ,actionButton('brmdebug','Remove Debug Capability'))}
     )
   )
   );
