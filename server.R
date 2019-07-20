@@ -83,7 +83,9 @@ shinyServer(function(input, output, session) {
                        ,rchicut=slidevals$Chi
                        ,rncut=slidevals$N,roddscut=slidevals$OR
                        ,starting=T
-                       ,rsysinfo=unclass(c(Sys.info(),sessionInfo()))
+                       ,rsysinfo=unclass(c(Sys.info(),sessionInfo()
+                                           ,BASEPATH=getwd()
+                                           ,ENV=as.list(Sys.getenv())))
                        ,log=list());
   observe({
     updateSelectInput(session,inputId='selBasic',selected=rv$rprefix);
@@ -240,6 +242,15 @@ shinyServer(function(input, output, session) {
   observeEvent(input$bdebug,{
     browser();
     });
+  
+  # permanently disable debug button and system info panel by 
+  # deleting the files that signal that they should be enabled
+  observeEvent(input$brmdebug,{
+    file.remove('.debug','remote_debug');
+    removeUI('#bdebug');
+    removeUI('#debuginfo');
+    message('Removed debug functionality');
+  });
 });
 
 c()
