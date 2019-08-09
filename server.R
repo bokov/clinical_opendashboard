@@ -170,12 +170,16 @@ shinyServer(function(input, output, session) {
   output$plotmain <- renderPlotly({
     message('About to render main plot');
     # prefixpoints defined in global.R, using demogcodes
+    # i.e. plot these results as a scatterplot
     if(any(rv$rdat$PREFIX %in% prefixpoints)){
       out <- quickpoints(rv$rdat,alpha=0.3
                          ,targetodds=rv$roddscut) + 
         theme(plot.margin=margin(15,15,30,20),aspect.ratio=1);
       txtMainVar <- txtMainVarDynamic;
     } else {
+      # otherwise, plot them as side-by-side bars
+      # TODO: think about what happens if somebody picks only non prefixpoints
+      #       variables but a lot of them
       out <- quickbars(rv$rdat) +
         theme(axis.text.x=element_text(angle=30)
               ,plot.margin = margin(30,30,60,40));
