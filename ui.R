@@ -14,7 +14,7 @@ shinyUI(fluidPage(
               ,tags$em(txtPageSubtitle))
   ,mainPanel(
     width=12,fluidRow(
-      column(2
+      column(2,id='leftcol'
              ,bsCollapse(id="filters",multiple=T #,open="Basic"
                          ,bsCollapsePanel(title=span("Basic",icon('angle-down')) 
                                           ,value="Basic"
@@ -60,11 +60,12 @@ shinyUI(fluidPage(
                                                         ,'Reset Sliders')
                                           )
                          )
-             ,hidden(actionButton('bupdate','Update plot and counts'))
+             ,hidden(actionButton('bupdate',tagList('Update plot',br()
+                                                    ,'and counts')))
              #,if(file.exists('.debug')) actionButton('bdebug','Debug') else c()
              ,uiOutput('uidebug')
              )
-      ,column(10,textOutput('maintext'),br()
+      ,column(9,textOutput('maintext'),br()
               ,plotlyOutput('plotmain',width = '79vmin',height = '70vmin'))
       )
     ,fluidRow(bsCollapse(id="details"
