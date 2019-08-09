@@ -236,6 +236,13 @@ selectcodegrps <- function(data,codemap
   # static selectors-- variables set explicitly and not filtered
   # doing this lapply/bind_rows thing in order to preserve the user-specified
   # ordering of the selected categories.
+  # If ALL codes are requested, just return the whole dataset without any
+  # further filtering.
+  if('ALL' %in% prefix){
+    oo <- chifilter(data,...); oo$Category <- 'All Codes'; return(oo);};
+  # Otherwise, do code-specific filtering.
+  # TODO: think about what would actually happen if somebody selected a mix of
+  #       static and dynamic selectors
   selst <- bind_rows(lapply(prefix,function(ii){
     subset(codemap,!is.na(CCD) & PREFIX==ii)}));
   # dynamic selectors-- only the prefix is set, and which variables
@@ -254,7 +261,9 @@ selectcodegrps <- function(data,codemap
   }
   # return static and then dynamically selected variables
   oo <- rbind(oost,oodn);
-  .dbg <- try(attr(oo,'sectioncols') <- attr(data,'sectioncols'));
+  #.dbg <- try({
+  attr(oo,'sectioncols') <- attr(data,'sectioncols');
+  #});
   #if(is(.dbg,'try-error')) browser();
   oo;
 }
