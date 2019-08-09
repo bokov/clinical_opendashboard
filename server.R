@@ -77,7 +77,8 @@ shinyServer(function(input, output, session) {
   # ---- Server init ----
   rv <- reactiveValues(rprefix=.GlobalEnv$selBasicDefault
                        ,rshowcols=c('Category','NAME'
-                                    ,grep('^(N_|FRC_)',names(dat),val=T))
+                                    ,grep('^(N_|FRC_|CHISQ_|OR_)'
+                                          ,names(dat),val=T))
                        ,rdat=selectcodegrps(dat
                                             ,prefix=.GlobalEnv$selBasicDefault)
                        ,rchicut=slidevals$Chi
