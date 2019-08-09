@@ -61,7 +61,8 @@ shinyUI(fluidPage(
                                           )
                          )
              ,hidden(actionButton('bupdate','Update plot and counts'))
-             ,if(file.exists('.debug')) actionButton('bdebug','Debug') else c()
+             #,if(file.exists('.debug')) actionButton('bdebug','Debug') else c()
+             ,uiOutput('uidebug')
              )
       ,column(10,textOutput('maintext'),br()
               ,plotlyOutput('plotmain',width = '79vmin',height = '70vmin'))
@@ -70,13 +71,7 @@ shinyUI(fluidPage(
                          ,bsCollapsePanel(span("Counts and percentages"
                                                ,icon('angle-down'))
                                           ,dataTableOutput('tblsel'))))
-    ,if(any(file.exists('remote_debug','.debug'))){
-      fluidRow(id='debuginfo',bsCollapse(id="systeminfo"
-                          ,bsCollapsePanel(span("System Info"
-                                                ,icon('angle-down'))
-                                           ,verbatimTextOutput('strSysinfo')
-                                           ,shinyTree('trSysinfo')))
-               ,actionButton('brmdebug','Remove Debug Capability'))}
+    ,uiOutput('uidebuginfo')
     )
   )
   );

@@ -84,15 +84,29 @@ shinyServer(function(input, output, session) {
                        ,rncut=slidevals$N,roddscut=slidevals$OR
                        ,starting=T
                        ,rsysinfo=unclass(c(Sys.info(),sessionInfo()
-                                           ,BASEPATH=getwd()
-                                           ,ENV=as.list(Sys.getenv())))
+                                           ,filesys=list(BASEPATH=getwd()
+                                                         ,FILES=list.files(
+                                                           all.files=T))
+                                           ,ENV=Sys.getenv()))
                        ,log=list());
   observe({
     updateSelectInput(session,inputId='selBasic',selected=rv$rprefix);
     });
   hide('bupdate');
   # ---- System/Session Info ----
-  output$trSysinfo <- renderTree(rv$rsysinfo);
+  if(file.exists('.debug')){
+    output$uidebug <- renderUI(actionButton('bdebug','Debug'))};
+  if(any(file.exists('remote_debug','.debug'))){
+    output$uidebuginfo <- renderUI({
+      fluidRow(id='debuginfo'
+               ,bsCollapse(id="systeminfo"
+                           ,bsCollapsePanel(span("System Info"
+                                                 ,icon('angle-down'))
+                                            ,verbatimTextOutput('strSysinfo')
+                                            ,shinyTree('trSysinfo')))
+               ,actionButton('brmdebug','Remove Debug Capability'))});
+    output$trSysinfo <- renderTree(rv$rsysinfo);
+  }
   #message('One-time clicking bupdate on init...');
   #click('breset');
   # ---- Reset ----
@@ -247,8 +261,8 @@ shinyServer(function(input, output, session) {
   # deleting the files that signal that they should be enabled
   observeEvent(input$brmdebug,{
     file.remove('.debug','remote_debug');
-    removeUI('#bdebug');
-    removeUI('#debuginfo');
+    removeUI('#uidebug');
+    removeUI('#uidebuginfo');
     message('Removed debug functionality');
   });
 });
