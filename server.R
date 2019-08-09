@@ -191,7 +191,6 @@ shinyServer(function(input, output, session) {
     output$maintext <- renderText(sprintf(paste(txtMainVarCommon,txtMainVar)
                                           ,title));
     #rv$currentplot <- out;
-
     ggplotly(out + ggtitle(title)
              ,tooltip='text');
   });
