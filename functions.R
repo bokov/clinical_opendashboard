@@ -184,24 +184,36 @@ chifilter <- function(data,ncutoff=300
                       # other is where to put additional filter terms
                       # start them with '& '
                       ,oddspattern='OR_%1$s'
+                      ,nonmissingpattern='!is.na(N_%1$s)'
                       # sortby is the variable by which the output will be 
                       # sorted, in descending order
                       ,varclass='PREFIX',sortby='N_REF',other=''
+                      # If filterbygroup set to FALSE keep all values in
+                      # rows where at least one group meets filter criteria
+                      # otherwise (new default), for groups not meeting filter
+                      # criteria replace values with NA
+                      ,filterbygroup=T
                       ,groups,...){
+  # TODO: check for sectioncols, and try to remedy if missing via 
+  #       standardize_chis()
   if(missing(groups)){
     groups <- setdiff(names(attr(data,'sectioncols')),c('Info','REF'))} else {
       warning("It is recommended you not manually specify the 'groups'"
               ,"argument. If you encounter an error, check there first.")};
   template <- paste('(',npattern,'>',ncutoff
                     ,'& p.adjust(pchisq(',chipattern,',df=1,lower=F),"fdr")<'
-                    #,'& ',chipattern,'>'
                     ,chicutoff
                     ,'&','abs(log(',oddspattern,'))','>',abs(log(oddscutoff))
                     ,other,')');
-  filter <- paste(sapply(groups,function(xx) sprintf(template,xx))
+  filter <- paste(grpfilter<-sapply(groups,function(xx) sprintf(template,xx))
                   ,collapse='|');
   out <- subset(data,eval(parse(text=filter)));
   attr(out,'sectioncols') <- attr(data,'sectioncols');
+  # If the filterbygroup flag is set (default) NA-out the individual values for
+  # the group failing to make the cutoff
+  if(filterbygroup) for(ii in groups){
+    out[!coalesce(with(out,eval(parse(text=grpfilter[ii]))),F)
+        ,attr(out,'sectioncols')[[ii]]]<-NA};
   if(!varclass %in% names(out)){
     varclass <- '';
     warning('"varclass" variable not found, ignoring');
@@ -236,6 +248,16 @@ selectcodegrps <- function(data,codemap
   # static selectors-- variables set explicitly and not filtered
   # doing this lapply/bind_rows thing in order to preserve the user-specified
   # ordering of the selected categories.
+  # If ALL codes are requested, just return the whole dataset without any
+  # further filtering.
+  if('ALL' %in% prefix){
+    oo <- chifilter(data,...);
+    oo$Category<-unlist(submulti(oo$PREFIX,demogcodes,method='exact'));
+    return(oo);
+    };
+  # Otherwise, do code-specific filtering.
+  # TODO: think about what would actually happen if somebody selected a mix of
+  #       static and dynamic selectors
   selst <- bind_rows(lapply(prefix,function(ii){
     subset(codemap,!is.na(CCD) & PREFIX==ii)}));
   # dynamic selectors-- only the prefix is set, and which variables
@@ -254,7 +276,9 @@ selectcodegrps <- function(data,codemap
   }
   # return static and then dynamically selected variables
   oo <- rbind(oost,oodn);
-  .dbg <- try(attr(oo,'sectioncols') <- attr(data,'sectioncols'));
+  #.dbg <- try({
+  attr(oo,'sectioncols') <- attr(data,'sectioncols');
+  #});
   #if(is(.dbg,'try-error')) browser();
   oo;
 }
@@ -304,6 +328,8 @@ quickpoints <- function(
   ,searchrep=NULL
   # tooltip template
   ,ttemplate=paste0('<b>%s</b><br>',refgroupname,': %s<br>%s: %s')
+  # tooltip template when the Category field can vary
+  ,ctemplate='<i><b>%s</b></i><br>'
   ,groups,...){
   if(missing(groups)){
     groups <- setdiff(names(attr(data,'sectioncols')),c('Info','REF'))} else {
@@ -324,6 +350,8 @@ quickpoints <- function(
   # better factoring.
   data0$tooltip <- with(data0,sprintf(ttemplate,NAME,percent(FRC_REF)
                                       ,Cohort,percent(FRC)));
+  if('Category' %in% other && length(unique(data0$Category))>1){
+    data0$tooltip <- with(data0,paste(sprintf(ctemplate,Category),tooltip))};
   out <- ggplot(data0,aes(y=FRC_REF,x=FRC,color=Cohort,text=tooltip)
                 ,alpha=alpha) + geom_point(alpha=alpha);
   maxy <- max(c(data0$FRC_REF,data0$FRC),na.rm = T);

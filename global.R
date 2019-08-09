@@ -11,15 +11,20 @@ if(is(.packagedebug,'try-error')) warning(.packagedebug);
 
 library(readr); library(shinyTree);
 # selected prefixes and concept codes 
+# TODO: consider dynamically creating demogcodes.csv from the data if it doesn't
+#       exist.
+# TODO: What would happen if there was a row in demogcodes.csv with PREFIX='ALL'
+#       instead of being added on at runtime? Would this be a cleaner solution?
 demogcodes <- if(file.exists('demogcodes.csv')){
   read_csv('demogcodes.csv')} else {read_csv('demogcodes_demo.csv')};
 # prefixes whose variables should be rendered as scatter-plots
-prefixpoints <- subset(demogcodes,is.na(CCD))$PREFIX;
+prefixpoints <- c(subset(demogcodes,is.na(CCD))$PREFIX,'ALL');
 # demogcodes should include the following columns: 'PREFIX','Category','CCD'
 # PREFIX and CCD are the same as used by ChinoType. Category is a human-readable
 # version of PREFIX.
 selBasicChoices <- with(unique(demogcodes[,c('PREFIX','Category')])
-                        ,setNames(PREFIX,Category));
+                        ,c(grep('TOTAL',inv=T,val=T,setNames(PREFIX,Category))
+                           ,c(`All Codes`='ALL')));
 # slider defaults
 slidevals <- list(N=300,OR=1.5
                   #,Chi=200
