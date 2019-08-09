@@ -23,7 +23,7 @@ shinyUI(fluidPage(
                                                 ,'Choose category of variables'
                                                 ,' to compare.')
                                           ,selectInput('selBasic',''
-                                                       ,selBasicChoices[-1]
+                                                       ,selBasicChoices
                                                        ,selected = selBasicDefault
                                                        #,multiple=T
                                                        )
