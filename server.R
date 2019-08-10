@@ -206,11 +206,12 @@ shinyServer(function(input, output, session) {
                     ,options=list(processing=T,searching=F,scroller=T
                                   ,scrollx='100%',scrolly='20vh'
                                   ,dom='Bfrtip'
-                                  ,buttons=c('copy','csv','excel','print'))
+                                  ,buttons=c('copy','csv','excel' #,'print'
+                                             ,'colvis'))
                     ) %>% 
       DT::formatPercentage(.,grep('^FRC_',dimnames(.)[[2]]),digits=2)
     #message('renderDataTable Done!'); dd;
-    });
+    },server=F);
   # ---- Disable or Enable Advanced Filters ----
   observeEvent(input$selBasic,{
     if(input$selBasic %in% prefixpoints) {
