@@ -23,6 +23,7 @@ chirename <- rbind(c('ODDS_RATIO','OR')
 
 totalcode <- 'TOTAL';
 mincountfrac <- 0.01;
+namecol <- 'NAME'; ccdcol <- 'CCD'; prefixcol <- 'PREFIX';
 
 renameforplots <- rbind(
   c('REF','Reference Population')
@@ -64,6 +65,9 @@ if(!exists('dat')||!exists('dat_totals')){
     standardize_chis(dfiles)};
   dat_totals <- subset(raw,CCD==totalcode);
   dat <- subset(raw,raw$N_REF>mincountfrac*dat_totals$N_REF);
+  # fix label-less columns
+  dat[[namecol]] <- coalesce(dat[[namecol]]
+                             ,paste(dat[[prefixcol]],dat[[ccdcol]],sep = ':'));
   attr(dat,'sectioncols') <- attr(raw,'sectioncols');
   save(dat,dat_totals,file='cached_data.rdata');
 }
