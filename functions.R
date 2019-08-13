@@ -200,14 +200,15 @@ chifilter <- function(data,ncutoff=300
     groups <- setdiff(names(attr(data,'sectioncols')),c('Info','REF'))} else {
       warning("It is recommended you not manually specify the 'groups'"
               ,"argument. If you encounter an error, check there first.")};
-  template <- paste('(',npattern,'>',ncutoff
-                    ,'& p.adjust(pchisq(',chipattern,',df=1,lower=F),"fdr")<'
-                    ,chicutoff
-                    ,'&','abs(log(',oddspattern,'))','>',abs(log(oddscutoff))
+  template <- paste('('
+                    # ,npattern,'>',ncutoff,'&'
+                    ,'p.adjust(pchisq(',chipattern,',df=1,lower=F),"fdr")<'
+                    ,chicutoff,'&'
+                    ,'abs(log(',oddspattern,'))','>',abs(log(oddscutoff))
                     ,other,')');
   filter <- paste(grpfilter<-sapply(groups,function(xx) sprintf(template,xx))
                   ,collapse='|');
-  out <- subset(data,eval(parse(text=filter)));
+  out <- subset(data,N_REF>ncutoff & eval(parse(text=filter)));
   attr(out,'sectioncols') <- attr(data,'sectioncols');
   # If the filterbygroup flag is set (default) NA-out the individual values for
   # the group failing to make the cutoff
