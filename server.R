@@ -80,7 +80,7 @@ message('Defining shinyServer');
 shinyServer(function(input, output, session) {
   # ---- Server init ----
   rv <- reactiveValues(rprefix=.GlobalEnv$selBasicDefault
-                       ,rshowcols=c('Category','NAME'
+                       ,rshowcols=c('Category','NAME','CCD'
                                     ,grep('^(N_|FRC_|CHISQ_|OR_)'
                                           ,names(dat),val=T))
                        ,rdat=selectcodegrps(dat
