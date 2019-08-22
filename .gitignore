@@ -42,3 +42,11 @@ remote_debug
 
 # local files
 local
+*.csv
+*.zip
+project_*.R
+.rstudio.sterr
+cached_data.rdata
+
+# lock files
+.~lock*
