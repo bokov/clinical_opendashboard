@@ -10,11 +10,13 @@ a,*/
 .container-fluid>.row {
   color: #C0511B;
   /*background-color: white;*/
+  font-family: "Cardo", "Times New Roman", serif; 
   margin: 1vmin; margin-bottom: 2vmin;
 }
-
 /* header in accordance with UT header styling */
-h3 {font-family: "Cardo", "Times New Roman", serif; margin: auto;}
+h3 {margin: auto;}
+
+.container-fluid>.row>em {font-style: normal;font-size: 0.8em;}
 
 /* The next few are to line up the page header */
 #apptitle {

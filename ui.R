@@ -11,13 +11,13 @@ shinyUI(fluidPage(
   ,includeCSS('df.css'),useShinyjs(),useShinyalert()
   #,tags$script(src = "codehr.js")
   ,fluidRow(h3("CODEHR: Clinical Open Dashboard for Electronic Health Records")
-            ,em('A free, open-source app made possible by support from'
-                    ,'NIH/NCATS UL1TR001120 (IIMS) and the'
-                    ,'Long School of Medicine KL2 Award.'
-                     ,'Source code available on',a('GitHub',href=gitlink
-                                                   ,target='_blank'))
-            ,br()
-            ,strong(txtPageSubtitle))
+            ,em('A free, open-source webapp made possible by support from'
+                ,'NIH/NCATS UL1TR001120 (IIMS) and the'
+                ,'Long School of Medicine KL2 Award.'
+                ,'Source code available on',a('GitHub',href=gitlink
+                                              ,target='_blank'))
+            # customized via project_uitext.R file
+            ,br(),strong(txtPageSubtitle))
   ,mainPanel(
     width=12,fluidRow(
       column(2,id='leftcol'
