@@ -1,6 +1,12 @@
 # for environments needing user-space packages
 if(dir.exists('R-lib')) .libPaths(c(normalizePath('R-lib'),.libPaths()));
 
+# If this is a git repo, construct the git link
+githash <- system('git rev-parse HEAD',intern=T);
+gitlink <- if(!is.null(attributes(githash))){
+  'https://github.com/bokov/clinical_opendashboard'} else {
+    paste0('https://github.com/bokov/clinical_opendashboard/tree/',githash)};
+
 # ---- Enforce version specific dependencies ----
 # The data.table update has to be done before plotly is loaded otherwise plotly
 # errors when trying to render numeric (scatterplot) variables
