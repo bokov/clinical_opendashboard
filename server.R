@@ -71,6 +71,29 @@ if(!exists('dat')||!exists('dat_totals')){
   attr(dat,'sectioncols') <- attr(raw,'sectioncols');
   save(dat,dat_totals,file='cached_data.rdata');
 }
+# code for later dynamically obtaining demogcodes
+# which codes in this dataset are empirically eligible for column vs
+# point treatment (vs, for now, none if there is only one code for
+# that prefix)
+.colpref <- table(dat$PREFIX) %>% subset((.)>1&(.)<=15) %>% names;
+.pntpref <- table(dat$PREFIX) %>% subset((.)>15) %>% names;
+# dynamic equivalent of demogcodes. This is going to replace demogcodes. The 
+# object called 'demogcodes' in the test code below will be replaced with a
+# dictionary object that is part of the repo. Either this object or some other 
+# one will also be used for joins on information associated with prefixes that 
+# we want to persist
+
+# The first part is for the column variables
+# .codes <- subset(dat,PREFIX %in% .colpref)[,c('PREFIX','CCD')] %>% 
+#   mutate(NAME=unlist(submulti(PREFIX,unique(demogcodes[,c('PREFIX','Category')])
+#                               ,method='exact'))) %>% arrange(PREFIX) %>%
+#   # it's row-bound to the part for scatterplot variables
+#   bind_rows(data.frame(PREFIX=.pntpref,CCD=NA
+#                        ,NAME=unlist(submulti(.pntpref,demogcodes
+#                                              ,method='exact'))));
+# # there may also be additional rows bound on for abnormal labs and perhaps other 
+# # future data elements that behave in similar ways
+
 # adapt slidevals sample size default based on smallest cohort size
 .GlobalEnv$slidevals$N <- round(min(dat_totals[
   ,grep('^N_',names(dat_totals))]) * mincountfrac);
