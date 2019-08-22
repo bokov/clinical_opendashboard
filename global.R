@@ -17,7 +17,7 @@ library(readr); library(shinyTree);
 #       instead of being added on at runtime? Would this be a cleaner solution?
 demogcodes <- if(file.exists('demogcodes.csv')){
   read_csv('demogcodes.csv')} else {read_csv('demogcodes_demo.csv')};
-# Prepending 'INA' to the PREFIX column will cause that code to be
+# Prepending 'INACT' to the PREFIX column will cause that code to be
 # hidden.
 demogcodes <- subset(demogcodes,!grepl('^INA',PREFIX));
 # prefixes whose variables should be rendered as scatter-plots
