@@ -2,6 +2,9 @@
 body,.dfHelp,.dfHelp code {
   font-family: "Open Sans",Trebuchet,sans-serif;
 }
+
+.plotlyjsicon {visibility: hidden; }
+
 /*.panel-primary,.panel-collapse>.panel-body{
   border-color: #008c99 !important; }
 a,*/
