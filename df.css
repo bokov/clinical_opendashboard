@@ -4,6 +4,9 @@ body,.dfHelp,.dfHelp code {
 }
 
 .plotlyjsicon {visibility: hidden; }
+/* hide the not-needed and confusing "closest data" and "compare data" buttons */
+.modebar-group:nth-of-type(4)>.modebar-btn:nth-of-type(2) {visibility: hidden;}
+.modebar-group:nth-of-type(4)>.modebar-btn:nth-of-type(3) {visibility: hidden;}
 
 /*.panel-primary,.panel-collapse>.panel-body{
   border-color: #008c99 !important; }
@@ -238,3 +241,4 @@ p,p>a,.dfHelp p,.regulartext,.dfDisclaimer,.regulartext li {
   color: black;
   font-stretch: semi-condensed;
 }
+
