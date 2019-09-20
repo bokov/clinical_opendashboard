@@ -102,6 +102,32 @@ if(!exists('dat')||!exists('dat_totals')){
 message('Defining shinyServer');
 shinyServer(function(input, output, session) {
   # ---- Server init ----
+  # check for parseQueryString(session$clientData$url_search)$dfile
+  if(is.null(dfile<-parseQueryString(session$clientData$url_search)$dfile) ||
+     !file.exists(dfile <- file.path(infiles,basename(dfile)))){
+    stop('No input files found')
+  }
+  # else check for $dhash (this will be to REDCap API) and if it's valid get zip
+  # create a temp subdir: tempfile('codehr')
+  # unzip to that dir
+  # inputenv <- new.env()
+  # if cached_data.rdata exists, load it into inputenv
+  # if project_custom.R exists, source into inputenv
+  # if project_uitext.R exists, source into inputenv
+  # if either dat or dat_totals are missing from inputenv create new ones
+  # 
+  # Read the data in using the following project_custom.R variables:
+  #    dfiles,totalcode,mincountfrac,namecol,prefixcol,ccdcol
+  # 
+  # raw <- if(length(dfiles)>1) Reduce(read_chis,dfiles) else {
+  #   standardize_chis(dfiles)};
+  # dat_totals <- subset(raw,CCD==totalcode);
+  # dat <- subset(raw,raw$N_REF>mincountfrac*dat_totals$N_REF);
+  # # fix label-less columns
+  # dat[[namecol]] <- coalesce(dat[[namecol]]
+  #                            ,paste(dat[[prefixcol]],dat[[ccdcol]],sep = ':'));
+  # attr(dat,'sectioncols') <- attr(raw,'sectioncols');
+  # save(dat,dat_totals,file='cached_data.rdata');
   rv <- reactiveValues(rprefix=.GlobalEnv$selBasicDefault
                        ,rshowcols=c('Category','NAME','CCD'
                                     ,grep('^(N_|FRC_|CHISQ_|OR_)'
