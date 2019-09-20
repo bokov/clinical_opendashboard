@@ -102,18 +102,30 @@ if(!exists('dat')||!exists('dat_totals')){
 message('Defining shinyServer');
 shinyServer(function(input, output, session) {
   # ---- Server init ----
-  # check for parseQueryString(session$clientData$url_search)$dfile
-  if(is.null(dfile<-parseQueryString(session$clientData$url_search)$dfile) ||
-     !file.exists(dfile <- file.path(infiles,basename(dfile)))){
-    stop('No input files found')
-  }
-  # else check for $dhash (this will be to REDCap API) and if it's valid get zip
-  # create a temp subdir: tempfile('codehr')
-  # unzip to that dir
-  # inputenv <- new.env()
-  # if cached_data.rdata exists, load it into inputenv
-  # if project_custom.R exists, source into inputenv
-  # if project_uitext.R exists, source into inputenv
+  observeEvent(session$clientData$url_search,{
+    # check for parseQueryString(session$clientData$url_search)$dfile
+    if(is.null(dfile<-parseQueryString(session$clientData$url_search)$dfile) ||
+       !file.exists(dfile <- file.path(infiles,basename(dfile)))){
+      # TODO: check for dhash argument, and try looking on RC
+      message('No input files found')
+      } else {
+        # create environments for unzipping and loading
+        ziptemp <- tempfile('codehr'); #envtemp <- new.env();
+        zipfiles <- unzip(dfile,exdir = ziptemp);
+        # if project_custom.R exists, source locally
+        if('project_custom.R' %in% basename(zipfiles)){
+          source(file.path(ziptemp,'project_custom.R'),local = TRUE)};
+        # TODO: if project_uitext.R exists, source into inputenv
+        # if cached_data.rdata exists, load it 
+        if('cached_data.R' %in% basename(zipfiles)){
+          load(file.path(ziptemp,'cached_data.R'))};
+        # if demogcodes.csv exists, override global default
+        if('demogcodes.csv' %in% basename(zipfiles)) {
+          demogcodes <- read_csv(file.path(ziptemp,'demogcodes.csv'));
+        }
+        browser();
+      }
+    });
   # if either dat or dat_totals are missing from inputenv create new ones
   # 
   # Read the data in using the following project_custom.R variables:
