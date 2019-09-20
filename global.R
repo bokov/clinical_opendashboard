@@ -1,12 +1,6 @@
 # for environments needing user-space packages
 if(dir.exists('R-lib')) .libPaths(c(normalizePath('R-lib'),.libPaths()));
 
-# # If this is a git repo, construct the git link
-# githash <- system('git rev-parse HEAD',intern=T);
-# gitlink <- if(!is.null(attributes(githash))){
-#   'https://github.com/bokov/clinical_opendashboard'} else {
-#     paste0('https://github.com/bokov/clinical_opendashboard/tree/',githash)};
-
 # ---- Enforce version specific dependencies ----
 # The data.table update has to be done before plotly is loaded otherwise plotly
 # errors when trying to render numeric (scatterplot) variables
@@ -15,12 +9,14 @@ if(dir.exists('R-lib')) .libPaths(c(normalizePath('R-lib'),.libPaths()));
   install.packages('data.table',repos='https://cloud.r-project.org')});
 if(is(.packagedebug,'try-error')) warning(.packagedebug);
 
+# ---- Where to look for input files ----
+infiles <- './infiles';
+
 library(readr); library(shinyTree); library(git2r);
 # git link
 gitlink <- if(!is(githash <- try(sha(repository_head())),'try-error')){
   paste0('https://github.com/bokov/clinical_opendashboard/tree/',githash);
   } else 'https://github.com/bokov/clinical_opendashboard';
-#gitlink <- 'https://github.com/bokov/clinical_opendashboard';
 
 # selected prefixes and concept codes 
 # TODO: consider dynamically creating demogcodes.csv from the data if it doesn't
