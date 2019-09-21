@@ -4,79 +4,66 @@
 #' date: "April 24, 2019"
 #' ---
 
-# ---- Libraries ----
-library(dplyr); library(ggplot2); library(scales); #library(DT);
-
-source('functions.R');
-
-
 # ---- Global variables ---- 
-#dfiles <- 'ALL_HISPANIC.csv';
-dfiles <- c('ALL_HISPANIC.csv','ALL_LOWINCOME.csv') #,'foo.csv');
-#                          rename from, rename to
-chirename <- rbind(c('ODDS_RATIO','OR')
-                        # if the left three columns in every data file
-                        # are not named precisely 'PREFIX','CCD',and 'NAME'
-                        # then each rename pattern should be added as a 
-                        # separate row in this part of the script
-                        );
 
 totalcode <- 'TOTAL';
-mincountfrac <- 0.01;
+#mincountfrac <- 0.01;
 namecol <- 'NAME'; ccdcol <- 'CCD'; prefixcol <- 'PREFIX';
 
-renameforplots <- rbind(
-  c('REF','Reference Population')
-  ,c('HISPANIC','Hispanic')
-  ,c('LOWINCOME','Low Income')
-);
-
+# renameforplots <- rbind(
+#   c('REF','Reference Population')
+#   ,c('HISPANIC','Hispanic')
+#   ,c('LOWINCOME','Low Income')
+# );
+# 
 # inherit the reference population from above
-refgroupname <- renameforplots[1,2];
+#refgroupname <- renameforplots[1,2];
 
 # give deployer of this app the option to override any of the above by creating
 # a script named 'project_custom.R'
-if(file.exists('project_custom.R')) source('project_custom.R',local = T);
+#if(file.exists('project_custom.R')) source('project_custom.R',local = T);
 
 # ---- Default Arguments ----
 #formals(quickreshape)[c('groups','other')] <- list(n_groupnames[-1]
                                                    # ,c('Category','NAME'
                                                    #    ,paste0('FRC_',n_all)));
 #formals(chifilter)[c('groups','sortby')] <- list(n_groupnames[-1],n_all);
-formals(selectcodegrps)$codemap <- demogcodes;
-formals(quickbars)[c('searchrep')] <- list(renameforplots);
-formals(quickpoints)[c('refgroupname','searchrep')] <- list(refgroupname
-                                                            ,renameforplots);
+#formals(selectcodegrps)$codemap <- demogcodes;
+#formals(quickbars)[c('searchrep')] <- list(renameforplots);
+#formals(quickpoints)[c('refgroupname','searchrep')] <- list(refgroupname
+#                                                            ,renameforplots);
 formals(read_chis)$searchrep <- chirename;
 # ---- Read Data ----
-if('cached_data.rdata' %in% list.files()){
-  load('cached_data.rdata');}
-if(!exists('dat')||!exists('dat_totals')){
-  if(!all(dfiles %in% list.files())){
-    stop('The input datafiles are missing. In addition to these scripts, you '
-         ,'or whoever is responsible for deploying this webapp also needs to '
-         ,'obtain data for it to process.')}
+# if('cached_data.rdata' %in% list.files()){
+#   load('cached_data.rdata');}
+# if(!exists('dat')||!isValidChi(dat)){
+#   if(!all(dfiles %in% list.files())){
+#     stop('The input datafiles are missing. In addition to these scripts, you '
+#          ,'or whoever is responsible for deploying this webapp also needs to '
+#          ,'obtain data for it to process.')}
   # Note: here is sed code for removing doubled quotes that could be
   # output by current chinotype:
   # sed -i 's/"\([^"]*\)"",/\1",/g' FILE.csv 
   # sed -i 's/,""\([^"]*\)"/,"\1/g' FILE.csv 
   
-  raw <- if(length(dfiles)>1) Reduce(read_chis,dfiles) else {
-    standardize_chis(dfiles)};
-  dat_totals <- subset(raw,CCD==totalcode);
-  dat <- subset(raw,raw$N_REF>mincountfrac*dat_totals$N_REF);
-  # fix label-less columns
-  dat[[namecol]] <- coalesce(dat[[namecol]]
-                             ,paste(dat[[prefixcol]],dat[[ccdcol]],sep = ':'));
-  attr(dat,'sectioncols') <- attr(raw,'sectioncols');
-  save(dat,dat_totals,file='cached_data.rdata');
-}
+  # raw <- if(length(dfiles)>1) Reduce(read_chis,dfiles) else {
+  #   standardize_chis(dfiles)};
+  # rolled into standardize_chis()
+  #dat_totals <- subset(raw,CCD==totalcode);
+  # part of read_chi_list()
+  #dat <- subset(raw,raw$N_REF>mincountfrac*dat_totals$N_REF);
+  # fix label-less columns ...moving to standardize_chis()
+  #dat[[namecol]] <- coalesce(dat[[namecol]]
+  #                           ,paste(dat[[prefixcol]],dat[[ccdcol]],sep = ':'));
+  #attr(dat,'sectioncols') <- attr(raw,'sectioncols');
+#   save(dat,dat_totals,file='cached_data.rdata');
+# }
 # code for later dynamically obtaining demogcodes
 # which codes in this dataset are empirically eligible for column vs
 # point treatment (vs, for now, none if there is only one code for
 # that prefix)
-.colpref <- table(dat$PREFIX) %>% subset((.)>1&(.)<=15) %>% names;
-.pntpref <- table(dat$PREFIX) %>% subset((.)>15) %>% names;
+#.colpref <- table(dat$PREFIX) %>% subset((.)>1&(.)<=15) %>% names;
+#.pntpref <- table(dat$PREFIX) %>% subset((.)>15) %>% names;
 # dynamic equivalent of demogcodes. This is going to replace demogcodes. The 
 # object called 'demogcodes' in the test code below will be replaced with a
 # dictionary object that is part of the repo. Either this object or some other 
@@ -96,68 +83,38 @@ if(!exists('dat')||!exists('dat_totals')){
 
 # adapt slidevals sample size default based on smallest cohort size
 .GlobalEnv$slidevals$N <- round(min(dat_totals[
-  ,grep('^N_',names(dat_totals))]) * mincountfrac);
+  ,grep('^N_',names(dat_totals))]) * minfrac);
 
 # ---- Server ----
 message('Defining shinyServer');
 shinyServer(function(input, output, session) {
-  # ---- Server init ----
-  observeEvent(session$clientData$url_search,{
-    # check for parseQueryString(session$clientData$url_search)$dfile
-    if(is.null(dfile<-parseQueryString(session$clientData$url_search)$dfile) ||
-       !file.exists(dfile <- file.path(infiles,basename(dfile)))){
-      # TODO: check for dhash argument, and try looking on RC
-      message('No input files found')
-      } else {
-        # create environments for unzipping and loading
-        ziptemp <- tempfile('codehr'); #envtemp <- new.env();
-        zipfiles <- unzip(dfile,exdir = ziptemp);
-        # if project_custom.R exists, source locally
-        if('project_custom.R' %in% basename(zipfiles)){
-          source(file.path(ziptemp,'project_custom.R'),local = TRUE)};
-        # TODO: if project_uitext.R exists, source into inputenv
-        # if cached_data.rdata exists, load it 
-        if('cached_data.R' %in% basename(zipfiles)){
-          load(file.path(ziptemp,'cached_data.R'))};
-        # if demogcodes.csv exists, override global default
-        if('demogcodes.csv' %in% basename(zipfiles)) {
-          demogcodes <- read_csv(file.path(ziptemp,'demogcodes.csv'));
-        }
-        browser();
-      }
-    });
-  # if either dat or dat_totals are missing from inputenv create new ones
-  # 
-  # Read the data in using the following project_custom.R variables:
-  #    dfiles,totalcode,mincountfrac,namecol,prefixcol,ccdcol
-  # 
-  # raw <- if(length(dfiles)>1) Reduce(read_chis,dfiles) else {
-  #   standardize_chis(dfiles)};
-  # dat_totals <- subset(raw,CCD==totalcode);
-  # dat <- subset(raw,raw$N_REF>mincountfrac*dat_totals$N_REF);
-  # # fix label-less columns
-  # dat[[namecol]] <- coalesce(dat[[namecol]]
-  #                            ,paste(dat[[prefixcol]],dat[[ccdcol]],sep = ':'));
-  # attr(dat,'sectioncols') <- attr(raw,'sectioncols');
-  # save(dat,dat_totals,file='cached_data.rdata');
-  rv <- reactiveValues(rprefix=.GlobalEnv$selBasicDefault
-                       ,rshowcols=c('Category','NAME','CCD'
-                                    ,grep('^(N_|FRC_|CHISQ_|OR_)'
-                                          ,names(dat),val=T))
-                       ,rdat=selectcodegrps(dat
-                                            ,prefix=.GlobalEnv$selBasicDefault)
-                       ,rchicut=slidevals$Chi
-                       ,rncut=slidevals$N,roddscut=slidevals$OR
-                       ,starting=T
-                       ,rsysinfo=unclass(c(Sys.info(),sessionInfo()
-                                           ,filesys=list(BASEPATH=getwd()
-                                                         ,FILES=list.files(
-                                                           all.files=T))
-                                           ,ENV=Sys.getenv()))
-                       ,log=list());
+
+# ---- initialize reactive values ----
+  rv <- reactiveValues(
+    rprefix=.GlobalEnv$selBasicDefault
+    ,rchicut=slidevals$Chi
+    ,rncut=slidevals$N,roddscut=slidevals$OR
+    ,starting=TRUE
+    ,rsysinfo=unclass(c(Sys.info(),sessionInfo()
+                        ,filesys=list(BASEPATH=getwd()
+                                      ,FILES=list.files(all.files=TRUE))
+                        ,ENV=Sys.getenv()))
+    ,spath=file.path(
+      infiles,c(isolate(parseQueryString(session$clientData$url_search))$dfile
+                ,'default')[1])
+    ,log=list());
+  rv$sv <- codehr_init(isolate(rv$spath));
+  rv$rshowcols <- with(isolate(rv$sv)
+                       ,c('Category','NAME','CCD'
+                          ,grep('^(N_|FRC_|CHISQ_|OR_)',names(dat)
+                                ,value =TRUE)));
+  rv$rdat <- with(isolate(rv$sv)
+                  ,selectcodegrps(get('dat'),prefix=.GlobalEnv$selBasicDefault
+                                  ,codemap = demogcodes));
+
   observe({
     updateSelectInput(session,inputId='selBasic',selected=rv$rprefix);
-    });
+    },label = 'selBasic_update');
   hide('bupdate');
   # ---- System/Session Info ----
   if(file.exists('.debug')){
@@ -173,8 +130,6 @@ shinyServer(function(input, output, session) {
                ,actionButton('brmdebug','Remove Debug Capability'))});
     output$trSysinfo <- renderTree(rv$rsysinfo);
   }
-  #message('One-time clicking bupdate on init...');
-  #click('breset');
   # ---- Reset ----
   # allow the user to reset the sliders to their starting values
   observeEvent(input$breset,{
@@ -182,10 +137,6 @@ shinyServer(function(input, output, session) {
     updateSliderInput(session,inputId='slN',value=slidevals$N);
     updateSliderInput(session,inputId='slChi',value=slidevals$Chi);
     updateSliderInput(session,inputId='slOR',value=slidevals$OR);
-    message('Clicking update');
-    # Don't know why, but have to programatically click bupdate twice 
-    # to trigger it
-    #click('bupdate'); click('bupdate');
     message('Done with reset click');
   });
   # ---- Hide/Show Update Button
@@ -212,9 +163,10 @@ shinyServer(function(input, output, session) {
     if(length(input$selBasic)==0){
       updateSelectInput(session,inputId='selBasic',selected=rv$rprefix)};
     message('updating rdat');
-    rdat <- selectcodegrps(dat,prefix=input$selBasic,ncutoff=input$slN
-                           ,chicutoff=input$slChi,oddscutoff=input$slOR
-                           );
+    rdat <- selectcodegrps(get('dat',rv$sv),codemap = get('demogcodes',rv$sv)
+                           ,prefix=input$selBasic,ncutoff=input$slN
+                           ,chicutoff=input$slChi
+                           ,oddscutoff=input$slOR);
     # if the filtering returns a non-null group, update reactive values with
     # new filtered data and cutoffs
     if(nrow(rdat)>1){ rv$rdat <- rdat; rv$rncut <- input$slN;
@@ -231,7 +183,7 @@ shinyServer(function(input, output, session) {
     };
     hide('bupdate');
     message('update button click done');
-  });
+  },label = 'update_button_click');
   # ---- Main Plot ---- 
   output$plotmain <- renderPlotly({
     message('About to render main plot');
@@ -239,6 +191,8 @@ shinyServer(function(input, output, session) {
     # i.e. plot these results as a scatterplot
     if(any(rv$rdat$PREFIX %in% prefixpoints)){
       out <- quickpoints(rv$rdat,alpha=0.3
+                         ,searchrep = get('renameforplots',rv$sv)
+                         ,refgroupname = get('renameforplots',rv$sv)[1,2]
                          ,targetodds=rv$roddscut) + 
         theme(plot.margin=margin(15,15,30,20),aspect.ratio=1);
       txtMainVar <- txtMainVarDynamic;
@@ -246,7 +200,7 @@ shinyServer(function(input, output, session) {
       # otherwise, plot them as side-by-side bars
       # TODO: think about what happens if somebody picks only non prefixpoints
       #       variables but a lot of them
-      out <- quickbars(rv$rdat) +
+      out <- quickbars(rv$rdat,searchrep = get('renameforplots',rv$sv)) +
         theme(axis.text.x=element_text(angle=30)
               ,plot.margin = margin(30,30,60,40));
       txtMainVar <- txtMainVarStatic;
@@ -263,8 +217,10 @@ shinyServer(function(input, output, session) {
   
   # ---- Table of Selected Data ----
   output$tblsel <- renderDataTable({
+    dat_totals <- attr(rv$rdat,'totalrow');
+    dat_totals <- dat_totals[,names(dat_totals) %in% rv$rshowcols];
     dd <- (rv$rdat[,names(rv$rdat) %in% rv$rshowcols]) %>% 
-      bind_rows(dat_totals[,intersect(names(.),names(dat_totals))]) %>%
+      bind_rows(dat_totals) %>%
       setNames(.,submulti(names(.),renameforplots)) %>% 
       DT::datatable(extensions = c('Buttons', 'Scroller')
                     ,autoHideNavigation=T,rownames=F,fillContainer=T
@@ -306,7 +262,6 @@ shinyServer(function(input, output, session) {
   
   endsession <- session$onSessionEnded(function() {
     message('\n\n*** Closing session');
-    #browser();
     writeLog(rv);
     message('\n\n*** Done logging');
     #click('breset'); click('bupdate');
