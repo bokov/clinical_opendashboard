@@ -12,24 +12,31 @@ if(is(.packagedebug,'try-error')) warning(.packagedebug);
 # ---- Where to look for input files ----
 infiles <- './infiles';
 
-library(readr); library(shinyTree); library(git2r);
+library(readr); library(shinyTree); library(git2r); library(zip);
+library(dplyr); library(ggplot2); library(scales); #library(DT);
+
 # git link
 gitlink <- if(!is(githash <- try(sha(repository_head())),'try-error')){
   paste0('https://github.com/bokov/clinical_opendashboard/tree/',githash);
   } else 'https://github.com/bokov/clinical_opendashboard';
+
+# ---- Helper functions ----
+source('functions.R');
 
 # selected prefixes and concept codes 
 # TODO: consider dynamically creating demogcodes.csv from the data if it doesn't
 #       exist.
 # TODO: What would happen if there was a row in demogcodes.csv with PREFIX='ALL'
 #       instead of being added on at runtime? Would this be a cleaner solution?
-demogcodes <- if(file.exists('demogcodes.csv')){
-  read_csv('demogcodes.csv')} else {read_csv('demogcodes_demo.csv')};
+#demogcodes <- if(file.exists('demogcodes.csv')){
+#  read_csv('demogcodes.csv')} else {read_csv('demogcodes_demo.csv')};
 # Prepending 'INACT' to the PREFIX column will cause that code to be
 # hidden.
-demogcodes <- subset(demogcodes,!grepl('^INACT',PREFIX));
+#demogcodes <- subset(demogcodes,!grepl('^INACT',PREFIX));
 # prefixes whose variables should be rendered as scatter-plots
-prefixpoints <- c(subset(demogcodes,is.na(CCD))$PREFIX,'ALL');
+#prefixpoints <- c(subset(demogcodes,is.na(CCD))$PREFIX,'ALL');
+#debug(codehr_init);
+codehr_init(file.path(infiles,'demo'),confenv = .GlobalEnv);
 # demogcodes should include the following columns: 'PREFIX','Category','CCD'
 # PREFIX and CCD are the same as used by ChinoType. Category is a human-readable
 # version of PREFIX.
