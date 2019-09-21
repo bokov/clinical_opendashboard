@@ -58,9 +58,111 @@ submulti <- function(xx,searchrep
 
 # ---- Manage Data ----
 
-standardize_chis <- function(dat,keepextra=F
+#' Look for R code, cached_data.rdata, and csv files in zip or directory
+#'
+#' @param file       Path to a file that is a zip file or a directory. All other
+#'                   arguments are optional.
+#' @param confenv    An enviornment into which to read settings and then return.
+#' @param defaultenv An environment already containing default settings,
+#'                   .GlobalEnv by default.
+#' @param csvs       Csv files to attempt to read in the zip. By default
+#'                   looks for 'demogcodes.csv'
+#' @param read_csv   What function to use for reading `csvs`. By
+#'                   default it's read_csv, but if you need to substitute
+#'                   in something else and it needs additional arguments,
+#'                   it will be necessary to wrap it inside an inline
+#'                   function that takes just one argument.
+#' @param onError    What to do on error, can be any function taking at least
+#'                   one argument coercible to character.
+#' @param readcache  If cached_rdata.rdata is found, should it be read?
+#' @param writecache If cached_rdata.rdata is not found, should one be added to
+#'                   the file?
+#' 
+#' If `onError` is set to something other than `stop`, `codehr_init()` will not
+#' error out on a missing or invalid `file` argument but rather will return the
+#' unaltered `confenv` object except that, if `confenv` is not identical to 
+#' `defaultenv` then the latter will be made its parent.
+#' 
+#' The use case is reading configurions from `defaultenv` but having 
+#' some of them overridden by `confenv`.
+#' 
+#' @return   environment
+#' @importMethodsFrom methods is
+#' @export
+#'
+#' @examples
+#' 
+#' conftest <- confenv('nonexistent.zip',onError=message);
+#' 
+codehr_init <- function(file,confenv=new.env(),defaultenv=.GlobalEnv
+                        ,csvs=c('demogcodes.csv')
+                        ,read_csv=function(xx) subset(readr::read_csv(xx)
+                                                      ,!grepl('^INACT',PREFIX))
+                        ,loadcode='default'
+                        ,onError=warning,readcache=TRUE,writecache=TRUE){
+  # defaultenv has the default settings which get overridden by the stuff
+  # that will get read into confenv but if it's the same (e.g. init OF the
+  # defaults) then don't change parent.env()
+  if(!identical(confenv,defaultenv)) parent.env(confenv) <- defaultenv;
+  
+  # handle directories vs zip files
+  if(isdir <- dir.exists(file)){
+    confdir <- file; conffiles <- list.files(confdir)}
+  else if(file.exists(file)){
+    confdir <- tempfile('codehr');
+    # unzip creates confdir and outputs conffiles
+    conffiles <- try(basename(unzip(file,exdir = confdir)));
+    if(is(conffiles,'try-error')||length(conffiles)==0){
+      onError(conffiles); return(confenv)}}
+  else {onError(file,' not found.'); return(confenv)};
+
+  # retain the confdir
+  confenv$confdir <- confdir;
+  # for introspection
+  confenv$self <- confenv;
+  
+  # try to read and load various files ----
+  # any R code...
+  for(ii in list.files(confdir,'*.R$|*.r$')){
+    source(file.path(confdir,ii),confenv)};
+  # look for previously cached data
+  .load0 <- ls(confenv);
+  if(readcache && 'cached_data.rdata' %in% conffiles){
+    load(file.path(confdir,'cached_data.rdata'),confenv)};
+  # .load1 is what has been cached previously
+  .load1 <- setdiff(ls(confenv),.load0);
+  # load specified csv files
+  for(ii in intersect(csvs,conffiles)){
+    iiobj <- tools::file_path_sans_ext(ii);
+    if(! iiobj %in% ls(confenv)){
+      confenv[[iiobj]] <- read_csv(file.path(confdir,ii))}};
+  # generate the main data ----
+  if(missing(loadcode)) loadcode <- quote(
+    {if(!'dat' %in% ls()||!isValidChi(dat)){
+      self$dat <- read_chi_list(file.path(confdir,dfiles),mincount = mincount
+                    ,minfrac = minfrac,customfilter = customfilter)
+      # to be removed once weeded out of code
+      self$dat_totals <- attr(dat,'totalrow')};
+    if(!'prefixpoints' %in% ls()){
+      self$prefixpoints <- union(subset(demogcodes,is.na(CCD))$PREFIX,'ALL');
+    }});
+  eval(loadcode,confenv);
+  # load2 is what had not been cached before but could be now
+  .load2 <- setdiff(ls(confenv),c(.load0,.load1));
+  if(writecache & length(.load2)>0){
+    .outpath <- normalizePath(file);
+    .prevwd <- getwd(); setwd(confdir);
+    save(list=c(.load2,.load1),file='cached_data.rdata',envir = confenv);
+    if(!isdir) zip::zip(.outpath,list.files());
+    setwd(.prevwd);
+  }
+  return(confenv);
+}
+
+standardize_chis <- function(dat,keepextra=FALSE
                              # set to NULL or c() to not do searchrep
                              ,searchrep=rbind(c('ODDS_RATIO','OR'))
+                             ,dototals=TRUE
                              ,readfn=readr::read_csv,...){
   if(!is(dat,'data.frame') && is.character(dat)) dat <- readfn(dat);
   if(!all(c('PREFIX','CCD') %in% names(dat))){
@@ -72,10 +174,10 @@ standardize_chis <- function(dat,keepextra=F
   # any up-front search replaces
   if(NROW(searchrep)>0) names(dat) <- submulti(names(dat),searchrep);
   names(dat) <- toupper(names(dat));
-  # make sure there is a TOTAL row, warn if not
-  if(nrow(subset(dat,PREFIX=='TOTAL'&CCD=='TOTAL'))==0){
-    warning("The object specified by the 'dat' arguments is missing a"
-            ," 'TOTAL' row, and this may cause errors further on.")};
+  # Make sure it has a NAME column and that column has values
+  if(!'NAME' %in% names(dat)) dat[['NAME']] <- NA;
+  dat[['NAME']] <- coalesce(dat[['NAME']]
+                            ,paste(dat[['PREFIX']],dat[['CCD']],sep = ':'));
   # get the base names
   basenames <- grep('^FRC_',names(dat),val=T) %>% gsub('^FRC_','',.);
   if(unique(basenames)!=basenames ||
@@ -95,9 +197,25 @@ standardize_chis <- function(dat,keepextra=F
     # TODO: make this error easier to understand and the warning after it
     stop("The object specified by the 'dat' argument seems to be missing the"
          ," count and/or the fraction column for the reference group.")};
+  if(dototals){
+    # make sure there is a TOTAL row, warn if not
+    totalrow <- subset(dat,PREFIX=='TOTAL'|CCD=='TOTAL');
+    if(nrow(totalrow)>1){
+      warning("Non-unique TOTAL row but continuing.");
+      totalrow <- totalrow[which.max(totalrow$FRC_REF),];
+    } else if(nrow(totalrow)==0){
+      warning("No row explicitly named TOTAL. Looking for a de-facto total");
+      totalrow <- dat[which.max(dat$FRC_REF),];
+      totalrow$PREFIX <- totalrow$CCD <- 'TOTAL';
+    };
+    if(totalrow$FRC_REF!=1){
+      warning("TOTAL row not actually the total, attempting to estimate total");
+      totalrow$N_REF <- with(totalrow,N_REF/FRC_REF);
+      totalrow$FRC_REF <- 1;};
+  }
   if(length(splitcols)!=length(splitidx)){
     warning("The object specified by the 'dat' argument is missing one or more"
-         ," count columns. This may cause errors later.")};
+            ," count columns. This may cause errors later.")};
   # splitAt N_foo columns and label with basenames
   sections <- setNames(splitAt(seq_along(names(dat)),splitidx)
                        ,c('Info',basenames));
@@ -130,6 +248,9 @@ standardize_chis <- function(dat,keepextra=F
   # return result
   out <- dat[,canonicalnames];
   attr(out,'sectioncols') <- sectioncols;
+  if(!'totalrow' %in% ls()) totalrow <- bind_rows(out[FALSE,]
+                                                  ,attr(dat,'totalrow'));
+  if(nrow(totalrow)>0) attr(out,'totalrow') <- totalrow;
   out;
 }
 
@@ -138,10 +259,42 @@ standardize_chis <- function(dat,keepextra=F
 # names)
 isValidChi <- function(dat,...){
   is(dat,'data.frame') && !is.null(sc<-unlist(attr(dat,'sectioncols'))) &&
+    !is.null(attr(dat,'totalrow')$N_REF) &&
     all(sc %in% names(dat)) && all_equal(dat[,sc],dat[,seq_along(sc)]) &&
     all(c('PREFIX','CCD','N_REF','FRC_REF') %in% sc) # &&
   # any(c('OR','CHISQ') %in% names(dat)
 };
+
+#' This is the function to call if you have more than two Chinotyp files to 
+#' merge. 
+#'
+#' @param chilist      Character vector of file names, the only required 
+#'                     argument.
+#' @param mincount     Each concept must occur at least this many times in the 
+#'                     reference group in order to be included.
+#' @param minfrac      Each concept must appear in at least this fraction of the
+#'                     reference group in order to be included.
+#' @param customfilter Any further concept selection criteria.
+#'
+#' @return A tibble which is also a valid chi data structure 
+#'         (see `isValidChi()`)
+#' @export
+#'
+read_chi_list <- function(chilist,mincount=100,minfrac=0.01
+                          ,customfilter=TRUE){
+  o1 <- if(length(chilist)>1) Reduce(read_chis,chilist) else {
+    standardize_chis(chilist)};
+  if(!isValidChi(o1)) o1 <- standardize_chis(o1);
+  o2 <- subset(o1,N_REF>max(mincount,minfrac*attr(o1,'totalrow')$N_REF) &
+                 eval(customfilter,o1));
+  if(nrow(o2)==0) stop("No rows met 'read_chi_list()' criteria. "
+                       ,"The 'mincount' or 'minfrac' arguments might be "
+                       ,"too large or there might be something wrong with "
+                       ,"the 'customfilter' argument");
+  attr(o2,'sectioncols') <- attr(o1,'sectioncols');
+  attr(o2,'totalrow') <- dplyr::bind_rows(o2[FALSE,],attr(o1,'totalrow'));
+  return(o2);
+}
 
 read_chis <- function(t1,t2,searchrep=rbind(c('ODDS_RATIO','OR'))){
   if(!isValidChi(t1)) t1 <- standardize_chis(t1,searchrep = searchrep);
@@ -158,6 +311,7 @@ read_chis <- function(t1,t2,searchrep=rbind(c('ODDS_RATIO','OR'))){
   out <- dplyr::full_join(t1,t2[,c(joinby,unlist(t2keep))],by=joinby);
   # merge the sectioncols, with the left side having precedence
   attr(out,'sectioncols') <- c(t1sc,t2keep);
+  if(!isValidChi(out)) out <- standardize_chis(out);
   if(!all.equal(nrow(out),nrow(t1),nrow(t2))){
     warning('Rows from the individual tables have been either lost '
            ,'or duplicated')};
@@ -210,6 +364,7 @@ chifilter <- function(data,ncutoff=300
                   ,collapse='|');
   out <- subset(data,N_REF>ncutoff & eval(parse(text=filter)));
   attr(out,'sectioncols') <- attr(data,'sectioncols');
+  attr(out,'totalrow') <- dplyr::bind_rows(out[FALSE,],attr(data,'totalrow'));
   # If the filterbygroup flag is set (default) NA-out the individual values for
   # the group failing to make the cutoff
   if(filterbygroup) for(ii in groups){
@@ -233,6 +388,7 @@ selectcodegrps <- function(data,codemap
                                      ,'DEM|LANGUAGE','DEM|RACE')
                            # ... passed to chifilter() function
                            ,groups,...){
+  if(is.null(data)) stop("The 'data' argument was null.");
   if(missing(groups)){
     groups <- setdiff(names(attr(data,'sectioncols')),c('Info','REF'))} else {
       warning("It is recommended you not manually specify the 'groups'"
@@ -279,6 +435,7 @@ selectcodegrps <- function(data,codemap
   oo <- rbind(oost,oodn);
   #.dbg <- try({
   attr(oo,'sectioncols') <- attr(data,'sectioncols');
+  attr(oo,'totalrow') <- dplyr::bind_rows(oo[FALSE,],attr(data,'totalrow'));
   #});
   #if(is(.dbg,'try-error')) browser();
   oo;
