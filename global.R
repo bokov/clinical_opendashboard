@@ -21,13 +21,11 @@ if(file.exists('.rccreds')){
   # .rcuri, which is the URL to the local server and .rctoken which is
   # the secret login credential. Do not check your .rccreds file into
   # any public repos!
-  library(redcapAPI); .prerc <- ls(all=T);
-  source('.rccreds',local = TRUE);
+  library(RCurl); .prerc <- ls(all=T); source('.rccreds',local = TRUE);
   .postrc <- setdiff(ls(all=TRUE),.prerc);
-  # rcc is the connection object that Shiny instances will share
-  rcc <- redcapConnection(.rcuri,.rctoken);
-  # delete the temporary variables to avoid unnecessary copies hanging
-  # around
+  # rcc is the connection credential all Shiny sessions will share
+  rcc <- list(url=.rcuri,token=.rctoken);
+  # delete the temporary variables to avoid unnecessary copies hanging around
   rm(list=.postrc);
 };
 
