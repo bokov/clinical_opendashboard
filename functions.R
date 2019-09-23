@@ -95,7 +95,7 @@ submulti <- function(xx,searchrep
 #' conftest <- confenv('nonexistent.zip',onError=message);
 #' 
 codehr_init <- function(file,confenv=new.env(),defaultenv=.GlobalEnv
-                        ,csvs=c('demogcodes.csv')
+                        ,csvs=c('demogcodes.csv'),rcid=NA
                         ,read_csv=function(xx) subset(readr::read_csv(xx)
                                                       ,!grepl('^INACT',PREFIX))
                         ,loadcode='default'
@@ -104,7 +104,13 @@ codehr_init <- function(file,confenv=new.env(),defaultenv=.GlobalEnv
   # that will get read into confenv but if it's the same (e.g. init OF the
   # defaults) then don't change parent.env()
   if(!identical(confenv,defaultenv)) parent.env(confenv) <- defaultenv;
-  
+  # check for redcap
+  if(!is.na(rcid) && exists('rcc',confenv)){
+    file <- tempfile(fileext = '.zip');
+    postForm(uri=rcc$url,token=rcc$token,content='file',action='export'
+             ,record=rcid,field='chinotype_counts_file', binary=TRUE) %>% 
+      as.vector %>% writeBin(file,useBytes = TRUE);
+  }
   # handle directories vs zip files
   if(isdir <- dir.exists(file)){
     confdir <- file; conffiles <- list.files(confdir)}
