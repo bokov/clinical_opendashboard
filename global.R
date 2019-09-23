@@ -12,8 +12,24 @@ if(is(.packagedebug,'try-error')) warning(.packagedebug);
 # ---- Where to look for input files ----
 infiles <- './infiles';
 
+# ---- Libraries ----
 library(readr); library(shinyTree); library(git2r); library(zip);
 library(dplyr); library(ggplot2); library(scales); #library(DT);
+# For pulling files from Redcap
+if(file.exists('.rccreds')){
+  # .rccreds, if it exists, must contain two variable assignments:
+  # .rcuri, which is the URL to the local server and .rctoken which is
+  # the secret login credential. Do not check your .rccreds file into
+  # any public repos!
+  library(redcapAPI); .prerc <- ls(all=T);
+  source('.rccreds',local = TRUE);
+  .postrc <- setdiff(ls(all=TRUE),.prerc);
+  # rcc is the connection object that Shiny instances will share
+  rcc <- redcapConnection(.rcuri,.rctoken);
+  # delete the temporary variables to avoid unnecessary copies hanging
+  # around
+  rm(list=.postrc);
+};
 
 # git link
 gitlink <- if(!is(githash <- try(sha(repository_head())),'try-error')){
