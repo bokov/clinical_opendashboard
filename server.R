@@ -102,8 +102,10 @@ shinyServer(function(input, output, session) {
     ,spath=file.path(
       infiles,c(isolate(parseQueryString(session$clientData$url_search))$dfile
                 ,'default')[1])
+    ,srcid=c(isolate(parseQueryString(session$clientData$url_search))$rcid
+             ,NA)[1]
     ,log=list());
-  rv$sv <- codehr_init(isolate(rv$spath));
+  rv$sv <- codehr_init(isolate(rv$spath),rcid=isolate(rv$srcid));
   rv$rshowcols <- with(isolate(rv$sv)
                        ,c('Category','NAME','CCD'
                           ,grep('^(N_|FRC_|CHISQ_|OR_)',names(dat)
