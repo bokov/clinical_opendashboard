@@ -111,8 +111,9 @@ shinyServer(function(input, output, session) {
                           ,grep('^(N_|FRC_|CHISQ_|OR_)',names(dat)
                                 ,value =TRUE)));
   rv$rdat <- with(isolate(rv$sv)
-                  ,selectcodegrps(get('dat'),prefix=.GlobalEnv$selBasicDefault
-                                  ,codemap = demogcodes));
+                  ,selectcodegrps(get('dat'),prefix=get('selBasicDefault')
+                                  ,codemap = get('demogcodes')));
+  
 
   observe({
     updateSelectInput(session,inputId='selBasic',selected=rv$rprefix);
