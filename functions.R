@@ -157,7 +157,7 @@ codehr_init <- function(file,confenv=new.env(),defaultenv=.GlobalEnv
   .load2 <- setdiff(ls(confenv),c(.load0,.load1));
   if(writecache & length(.load2)>0){
     .outpath <- normalizePath(file);
-    .prevwd <- getwd(); setwd(confdir);
+    .prevwd <- getwd(); setwd(normalizePath(confdir));
     save(list=c(.load2,.load1),file='cached_data.rdata',envir = confenv);
     if(!isdir) zip::zip(.outpath,list.files());
     setwd(.prevwd);
@@ -266,7 +266,7 @@ standardize_chis <- function(dat,keepextra=FALSE
 isValidChi <- function(dat,...){
   is(dat,'data.frame') && !is.null(sc<-unlist(attr(dat,'sectioncols'))) &&
     !is.null(attr(dat,'totalrow')$N_REF) &&
-    all(sc %in% names(dat)) && all_equal(dat[,sc],dat[,seq_along(sc)]) &&
+    all(sc %in% names(dat)) && all.equal(dat[,sc],dat[,seq_along(sc)]) &&
     all(c('PREFIX','CCD','N_REF','FRC_REF') %in% sc) # &&
   # any(c('OR','CHISQ') %in% names(dat)
 };
