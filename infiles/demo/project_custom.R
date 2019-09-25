@@ -1,10 +1,10 @@
 # The minimum fraction of the reference group that must have a code for that
 # code to be included
-minfrac <- 0.05;
+minfrac <- 0.01;
 
 # The minimun count of positives from the reference group for a code to be 
 # included
-mincount <- 500;
+mincount <- 100;
 
 # Any other custom selection criteria for codes
 customfilter <- TRUE;
