@@ -34,6 +34,12 @@ gitlink <- if(!is(githash <- try(sha(repository_head())),'try-error')){
   paste0('https://github.com/bokov/clinical_opendashboard/tree/',githash);
   } else 'https://github.com/bokov/clinical_opendashboard';
 
+# ---- Default settings ----
+# These govern criteria for importing counts from the data file
+mincount = 1;
+minfrac = 0.001;
+customfilter = TRUE;
+
 # ---- Helper functions ----
 source('functions.R');
 
