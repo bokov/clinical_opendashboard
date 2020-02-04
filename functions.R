@@ -13,6 +13,33 @@ splitAt <- function(xx, pos) {
   Map(function(xx, i, j) xx[i:j], list(xx), head(pos, -1L), tail(pos, -1L) - 1L)
   };
 
+sandbox_env <- function(whitelist=c('-',':','!','!=','(','['
+                                    ,'[<-.data.frame','[<-.Date','[<-.factor'
+                                    ,'[<-.numeric_version'
+                                    ,'[<-.POSIXct','[<-.POSIXlt'
+                                    ,'[[','[[<-','[<-'
+                                    ,'[[<-.data.frame','[[<-.factor'
+                                    ,'[[<-.numeric_version'
+                                    ,'{','*','/','&','&&','%*%','%/%','%%'
+                                    ,'%in%','%o%','%x%','^','+','<','<-','<='
+                                    ,'=','==','>','>=','|','||','~'
+                                    ,'$','$<-','$.data.frame','$<-.data.frame'
+                                    ,'identical','all.equal','all.equal.list'
+                                    ,'c','list','comment','names'
+                                    ,'names.data.frame','names.default'
+                                    ,'dimnames','dimnames.data.frame'
+                                    ,'colnames','rownames','row.names','is.na'
+                                    ,'is.na.data.frame','is.nan'
+                                    ,'row.names.data.frame')
+                        ,fn=function(...) message('Forbidden')){
+  parent <- new.env(parent=baseenv());
+  for(ii in setdiff(ls(baseenv(),all.names = TRUE),whitelist)){
+    parent[[ii]] <- fn};
+  lockEnvironment(parent,bindings = TRUE);
+  new.env(parent=parent);
+}
+
+
 # ---- Rename/Remap ----
 #' Usage: `xx<-mapnames(xx,lookup)` where lookup is a named character vector
 #' the names of the elements in the character vector are what you are renaming
