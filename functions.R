@@ -58,6 +58,18 @@ submulti <- function(xx,searchrep
 
 # ---- Manage Data ----
 
+dynchicodes <- function(dat,exclude=c('GEO')
+                        ,colvars=c('UTHSCSA|FINCLASS','TOBACCO_USER','MYC_STATUS','MYC_RECV_EMAIL','MYC_ACCESSED','Institution','DischStat','DischDisp','DischargeStatus','DEM|VITAL','DEM|STATE','DEM|SEX','DEM|RELIGION','DEM|RACE','DEM|MARITAL','DEM|LANGUAGE','DEM|ETHNICITY')
+                        ,custom=c(`Abnormal Labs`=quote(substr(CCD,1,7) %in% c('L_LOINC','H_LOINC')))){
+  if(!'CATEGORY' %in% names(dat)) dat$CATEGORY <- dat$PREFIX;
+  out <- unique(subset(dat,PREFIX %in% colvars)[,c('PREFIX','CATEGORY','CCD')]);
+  out <- rbind(out
+               ,unique(cbind(subset(dat
+                                    ,!PREFIX %in% c(colvars,exclude))[
+                                      ,c('PREFIX','CATEGORY')],CCD=NA)));
+  browser();
+}
+
 #' Look for R code, cached_data.rdata, and csv files in zip or directory
 #'
 #' @param file       Path to a file that is a zip file or a directory. All other
