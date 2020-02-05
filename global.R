@@ -56,7 +56,7 @@ source('functions.R');
 # prefixes whose variables should be rendered as scatter-plots
 #prefixpoints <- c(subset(demogcodes,is.na(CCD))$PREFIX,'ALL');
 #debug(codehr_init);
-codehr_init(file.path(infiles,'demo'),confenv = .GlobalEnv);
+#codehr_init(file.path(infiles,'demo'),confenv = .GlobalEnv);
 # demogcodes should include the following columns: 'PREFIX','Category','CCD'
 # PREFIX and CCD are the same as used by ChinoType. Category is a human-readable
 # version of PREFIX.
@@ -67,16 +67,16 @@ codehr_init(file.path(infiles,'demo'),confenv = .GlobalEnv);
 # Variables for spots
 # subset(foo,!PREFIX %in% c('UTHSCSA|FINCLASS','TOBACCO_USER','MYC_STATUS','MYC_RECV_EMAIL','MYC_ACCESSED','Institution','DischStat','DischDisp','DischargeStatus','DEM|VITAL','DEM|STATE','DEM|SEX','DEM|RELIGION','DEM|RACE','DEM|MARITAL','DEM|LANGUAGE','DEM|ETHNICITY','GEO'))[,c('PREFIX','CATEGORY')] %>% unique %>% View
 # Need to update CODEHR_INIT to try to derive CSVs first
-selBasicChoices <- with(unique(demogcodes[,c('PREFIX','Category')])
-                        ,c(grep('TOTAL',inv=T,val=T,setNames(PREFIX,Category))
-                           ,c(`All Codes`='ALL')));
+# selBasicChoices <- with(unique(demogcodes[,c('PREFIX','Category')])
+#                         ,c(grep('TOTAL',inv=T,val=T,setNames(PREFIX,Category))
+#                            ,c(`All Codes`='ALL')));
 # slider defaults
-slidevals <- list(N=300,OR=1.5
+slidevals <- list(N=100,OR=1.2
                   #,Chi=200
                   ,Chi=0.05
                   );
 # UI text
 source('uitext.R');
 # to override various stuff
-if(file.exists('project_uitext.R')) source('project_uitext.R');
+#if(file.exists('project_uitext.R')) source('project_uitext.R');
 c()
