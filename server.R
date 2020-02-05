@@ -10,14 +10,6 @@ totalcode <- 'TOTAL';
 #mincountfrac <- 0.01;
 namecol <- 'NAME'; ccdcol <- 'CCD'; prefixcol <- 'PREFIX';
 
-# renameforplots <- rbind(
-#   c('REF','Reference Population')
-#   ,c('HISPANIC','Hispanic')
-#   ,c('LOWINCOME','Low Income')
-# );
-# 
-# inherit the reference population from above
-#refgroupname <- renameforplots[1,2];
 
 # give deployer of this app the option to override any of the above by creating
 # a script named 'project_custom.R'
@@ -32,7 +24,7 @@ namecol <- 'NAME'; ccdcol <- 'CCD'; prefixcol <- 'PREFIX';
 #formals(quickbars)[c('searchrep')] <- list(renameforplots);
 #formals(quickpoints)[c('refgroupname','searchrep')] <- list(refgroupname
 #                                                            ,renameforplots);
-formals(read_chis)$searchrep <- chirename;
+#formals(read_chis)$searchrep <- chirename;
 # ---- Read Data ----
 # if('cached_data.rdata' %in% list.files()){
 #   load('cached_data.rdata');}
@@ -82,8 +74,8 @@ formals(read_chis)$searchrep <- chirename;
 # # future data elements that behave in similar ways
 
 # adapt slidevals sample size default based on smallest cohort size
-.GlobalEnv$slidevals$N <- round(min(dat_totals[
-  ,grep('^N_',names(dat_totals))]) * minfrac);
+#.GlobalEnv$slidevals$N <- round(min(dat_totals[
+#  ,grep('^N_',names(dat_totals))]) * minfrac);
 
 # ---- Server ----
 message('Defining shinyServer');
@@ -91,9 +83,8 @@ shinyServer(function(input, output, session) {
 
 # ---- initialize reactive values ----
   rv <- reactiveValues(
-    rprefix=.GlobalEnv$selBasicDefault
-    ,rchicut=slidevals$Chi
-    ,rncut=slidevals$N,roddscut=slidevals$OR
+     rchicut=slidevals$Chi
+    ,roddscut=slidevals$OR
     ,starting=TRUE
     ,rsysinfo=unclass(c(Sys.info(),sessionInfo()
                         ,filesys=list(BASEPATH=getwd()
@@ -101,24 +92,34 @@ shinyServer(function(input, output, session) {
                         ,ENV=Sys.getenv()))
     ,spath=file.path(
       infiles,c(isolate(parseQueryString(session$clientData$url_search))$dfile
-                ,'default')[1])
+                ,'demo')[1])
     ,srcid=c(isolate(parseQueryString(session$clientData$url_search))$rcid
              ,NA)[1]
     ,log=list());
   rv$sv <- codehr_init(isolate(rv$spath),rcid=isolate(rv$srcid));
+  rv$rprefix<-with(isolate(rv$sv),selBasicDefault);
+  rv$rncut <- with(isolate(rv$sv)
+                   ,round(min(dat_totals[
+                     ,grep('^N_',names(dat_totals))]) * minfrac));
+  rv$rdat <- with(isolate(rv$sv)
+                  ,selectcodegrps(get('dat'),prefix=get('selBasicDefault')
+                                  ,codemap = get('demogcodes')));
   rv$rshowcols <- with(isolate(rv$sv)
                        ,c('Category','NAME','CCD'
                           ,grep('^(N_|FRC_|CHISQ_|OR_)',names(dat)
                                 ,value =TRUE)));
-  rv$rdat <- with(isolate(rv$sv)
-                  ,selectcodegrps(get('dat'),prefix=get('selBasicDefault')
-                                  ,codemap = get('demogcodes')));
-  
+
+  output$subtitle <- renderUI(rv$sv$txtPageSubtitle);
 
   observe({
-    updateSelectInput(session,inputId='selBasic',selected=rv$rprefix);
+    updateSelectInput(session,inputId='selBasic'
+                      ,choices=with(rv$sv$demogcodes
+                                    ,c(setNames(PREFIX,Category)
+                                       ,`All Variables`='ALL')
+                                    ,selected=rv$rprefix));
     },label = 'selBasic_update');
   hide('bupdate');
+  
   # ---- System/Session Info ----
   if(file.exists('.debug')){
     output$uidebug <- renderUI(actionButton('bdebug','Debug'))};
@@ -142,6 +143,7 @@ shinyServer(function(input, output, session) {
     updateSliderInput(session,inputId='slOR',value=slidevals$OR);
     message('Done with reset click');
   });
+  
   # ---- Hide/Show Update Button
   observeEvent({input$selBasic;input$slChi;input$slOR; input$slN;}
                ,if(rv$starting) {
@@ -172,9 +174,19 @@ shinyServer(function(input, output, session) {
                            ,oddscutoff=input$slOR);
     # if the filtering returns a non-null group, update reactive values with
     # new filtered data and cutoffs
-    if(nrow(rdat)>1){ rv$rdat <- rdat; rv$rncut <- input$slN;
-    rv$rchicut <- input$slChi; rv$roddscut <- input$slOR
-    rv$rprefix <- input$selBasic} else {
+    if(nrow(rdat)>1){ 
+      rv$rdat <- rdat; rv$rncut <- input$slN;
+      if((rv$rchicut <- c(attr(rdat,'chicutoff'),input$slChi)[1]) != 
+         input$slChi){
+        updateSliderInput(session,inputId='slChi',value=rv$rchicut);
+        showNotification('No values were returned, so the False Discovery Rate cutoff had to be adjusted'
+                         ,type='warning')};
+      if((rv$roddscut <- c(attr(rdat,'oddscutoff'),input$slOR)[1]) != 
+         input$slOR){
+        updateSliderInput(session,inputId='slOR',value=rv$roddscut);
+        showNotification('No values were returned, so the Odds Ratio cutoff had to be adjusted'
+                         ,type='warning')};
+      rv$rprefix <- input$selBasic } else {
       # otherwise, reset the settings to what they were before the update button
       # got pressed
       showNotification('No results match criteria, restoring previous ones.'
@@ -187,18 +199,20 @@ shinyServer(function(input, output, session) {
     hide('bupdate');
     message('update button click done');
   },label = 'update_button_click');
+  
   # ---- Main Plot ---- 
   output$plotmain <- renderPlotly({
-    message('About to render main plot');
+    message('About to render main plot for ',paste(unique(rv$rdat$PREFIX)
+                                                   ,collapse="', '"));
     # prefixpoints defined in global.R, using demogcodes
     # i.e. plot these results as a scatterplot
-    if(any(rv$rdat$PREFIX %in% prefixpoints)){
+    if(any(rv$rdat$PREFIX %in% rv$sv$prefixpoints)){
       out <- quickpoints(rv$rdat,alpha=0.3
                          ,searchrep = get('renameforplots',rv$sv)
                          ,refgroupname = get('renameforplots',rv$sv)[1,2]
                          ,targetodds=rv$roddscut) + 
         theme(plot.margin=margin(15,15,30,20),aspect.ratio=1);
-      txtMainVar <- txtMainVarDynamic;
+      txtMainVar <- with(rv$sv,get('txtMainVarDynamic'));
     } else {
       # otherwise, plot them as side-by-side bars
       # TODO: think about what happens if somebody picks only non prefixpoints
@@ -206,14 +220,15 @@ shinyServer(function(input, output, session) {
       out <- quickbars(rv$rdat,searchrep = get('renameforplots',rv$sv)) +
         theme(axis.text.x=element_text(angle=30)
               ,plot.margin = margin(30,30,60,40));
-      txtMainVar <- txtMainVarStatic;
+      txtMainVar <- with(rv$sv,get('txtMainVarStatic'));
     }
     title <- submulti(isolate(rv$rprefix)
-                      ,unique(demogcodes[,c('PREFIX','Category')])
+                      ,unique(rv$sv$demogcodes[,c('PREFIX','Category')])
                       ,method='exact') %>% unlist %>% paste0(collapse=', ');
-    output$maintext <- renderText(sprintf(paste(txtMainVarCommon,txtMainVar)
+    output$maintext <- renderText(sprintf(paste(with(rv$sv
+                                                     ,get('txtMainVarCommon'))
+                                                ,txtMainVar)
                                           ,title));
-    #rv$currentplot <- out;
     ggplotly(out + ggtitle(title)
              ,tooltip='text');
   });
@@ -224,7 +239,7 @@ shinyServer(function(input, output, session) {
     dat_totals <- dat_totals[,names(dat_totals) %in% rv$rshowcols];
     dd <- (rv$rdat[,names(rv$rdat) %in% rv$rshowcols]) %>% 
       bind_rows(dat_totals) %>%
-      setNames(.,submulti(names(.),renameforplots)) %>% 
+      setNames(.,submulti(names(.),get('renameforplots',rv$sv))) %>% 
       DT::datatable(extensions = c('Buttons', 'Scroller')
                     ,autoHideNavigation=T,rownames=F,fillContainer=T
                     ,options=list(processing=T,searching=F,scroller=T
@@ -238,16 +253,11 @@ shinyServer(function(input, output, session) {
     },server=F);
   # ---- Disable or Enable Advanced Filters ----
   observeEvent(input$selBasic,{
-    if(input$selBasic %in% prefixpoints) {
+    if(input$selBasic %in% rv$sv$prefixpoints) {
       show(selector=".panel[value='Advanced']");
-      #enable(selector=".panel[value='Advanced']>div.panel-heading>
-      #        .panel-title>.collapsed");
       showNotification('Advanced filters available for this data element')
       } else {
         hide(selector=".panel[value='Advanced']");
-        #updateCollapse(session,'filters',close='Advanced');
-      #disable(selector=".panel[value='Advanced']>div.panel-heading>
-      #      .panel-title>.collapsed");
     }
   });
   # ---- Logging ----
