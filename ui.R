@@ -4,7 +4,7 @@ library(DT);
 options(shiny.maxRequestSize=50*1024^2);
 # apparently in some environments loading this from global.R doesn't reach here
 # or doesn't reach here immediately
-if(file.exists('project_uitext.R')) source('project_uitext.R');
+#if(file.exists('project_uitext.R')) source('project_uitext.R');
 
 shinyUI(fluidPage(
   shiny::tags$head(shiny::tags$link(rel="shortcut icon", href="favicon.ico"))
@@ -17,7 +17,7 @@ shinyUI(fluidPage(
                 ,'Source code available on',a('GitHub',href=gitlink
                                               ,target='_blank'))
             # customized via project_uitext.R file
-            ,br(),strong(txtPageSubtitle))
+            ,br(),uiOutput('subtitle',inline = TRUE))
   ,mainPanel(
     width=12,fluidRow(
       column(2,id='leftcol'
@@ -29,8 +29,9 @@ shinyUI(fluidPage(
                                                 ,'Choose category of variables'
                                                 ,' to compare.')
                                           ,selectInput('selBasic',''
-                                                       ,selBasicChoices
-                                                       ,selected = selBasicDefault
+                                                       ,choices=c()
+                                                       #,selBasicChoices
+                                                       #,selected = selBasicDefault
                                                        #,multiple=T
                                                        )
                                           )
@@ -38,13 +39,13 @@ shinyUI(fluidPage(
                                                       ,icon('angle-down'))
                                           ,value="Advanced"
                                           ,sliderInput('slN','Count cutoff'
-                                                       ,min=50,max=2000
+                                                       ,min=10,max=2000
                                                        ,value=slidevals$N
                                                        ,step = 1)
                                           ,hr()
                                           ,sliderInput('slOR'
                                                        ,'Odds ratio cutoff'
-                                                       ,min=1.1,max=4
+                                                       ,min=1,max=4
                                                        ,value=slidevals$OR
                                                        ,step=0.01)
                                           ,hr()
