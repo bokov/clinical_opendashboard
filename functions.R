@@ -13,6 +13,100 @@ splitAt <- function(xx, pos) {
   Map(function(xx, i, j) xx[i:j], list(xx), head(pos, -1L), tail(pos, -1L) - 1L)
   };
 
+#' Return a list with all values that do not inherit from one of the classes in
+#' \code{return_whitelist} recursively replaced with \code{replace}. Differs 
+#' from \code{rapply} because it doesn't destroy the attributes of recursive
+#' objects
+#'
+#' @param obj              Any object
+#' @param return_whitelist Character vector listing permitted classes
+#' @param replace          What to replace non-permitted classes with
+#'
+#' @return list
+#' @export
+#'
+#' @examples
+#' 
+#' foo <- sandbox_extract(iris,c('character','numeric'))
+#' head(foo)
+#' # the factor column is removed
+#' foo <- sandbox_extract(iris,c('character','numeric'),'XX')
+#' head(foo)
+#' # the factor column is replaced with 'XX'
+sandbox_extract <- function(obj
+                            ,return_whitelist=c('character','numeric','logical'
+                                                ,'Date','POSIXct','POSIXt'
+                                                ,'matrix','array','NULL'
+                                                ,'factor')
+                            ,replace=NA){
+  thisfn <- sys.function();
+  if(is.atomic(obj)) if(inherits(obj,return_whitelist)) return(obj) else{
+    return(replace)};
+  for(ii in seq_along(obj)){
+    obj[[ii]] <- thisfn(obj[[ii]],return_whitelist,replace)};
+  return(obj);
+}
+
+
+#' Run scripts in a (more) secure manner. A dedicated locked-down environment is
+#' created via \code{sandbox_env}, passed to \code{source} as the \code{local}
+#' argument (all the other arguments are passed as-is). By default also converts
+#' the execution environment to a list and filters out non-whitelisted objects.
+#' 
+#' Among the use-cases is blocking malicious code in user-submitted script 
+#' files.
+#' 
+#' Note: Do not explicitly specify the \code{local} argument, doing so will 
+#' currently result in an error.
+#'
+#' @param ...              Passed to \code{source}
+#' @param return_whitelist Character vector of types of values permitted in the
+#'                         output.
+#' @param return_asis      Don't filter the results, return the sandbox 
+#'                         environment as-is
+#'
+#' @return   List or environment
+#' @export
+#'
+#' @examples
+#' 
+#' foo <- sandbox_source(exprs=expression(bar<-data.frame(BLA=c(1,2,3,4,5)
+#' ,BLU=c('A','b','c','c','D'))));
+#' summary(foo);
+#' rm(foo);
+#'  
+#' foo <- sandbox_source(exprs=expression(system('cat /etc/passwd')))
+#' # This one is blocked
+#' 
+sandbox_source <- function(...
+                           ,return_whitelist=c('character','numeric','logical'
+                                               ,'Date','POSIXct','POSIXt'
+                                               ,'matrix','array','NULL'
+                                               ,'data.frame'
+                                               ,'factor')
+                           ,return_asis=FALSE
+                           ,env_whitelist){
+  sandbox <- if(missing(env_whitelist)) sandbox_env() else {
+    sandbox_env(whitelist = env_whitelist);
+  }
+  source(...,local=sandbox);
+  return(if(return_asis) sandbox else{
+    sandbox_extract(as.list(sandbox),return_whitelist)});
+}
+
+#' Return a locked-down environment in whose scope only the base functions 
+#' listed in the \code{whitelist} argument are permitted to run.
+#'
+#' @param whitelist  Character vector of function names from the \code{base} 
+#'                   package which will be permitted to run directly.
+#' @param fn         Function with which to replace all the non-\code{whitelist}
+#'                   functions.
+#'
+#' @return  Environment
+#' @export
+#'
+#' @examples  
+#' foo <- sandbox_env()
 sandbox_env <- function(whitelist=c('-',':','!','!=','(','['
                                     ,'[<-.data.frame','[<-.Date','[<-.factor'
                                     ,'[<-.numeric_version'
@@ -24,6 +118,7 @@ sandbox_env <- function(whitelist=c('-',':','!','!=','(','['
                                     ,'%in%','%o%','%x%','^','+','<','<-','<='
                                     ,'=','==','>','>=','|','||','~'
                                     ,'$','$<-','$.data.frame','$<-.data.frame'
+                                    ,'data.frame','cbind','rbind'
                                     ,'identical','all.equal','all.equal.list'
                                     ,'c','list','comment','names'
                                     ,'names.data.frame','names.default'
@@ -31,7 +126,8 @@ sandbox_env <- function(whitelist=c('-',':','!','!=','(','['
                                     ,'colnames','rownames','row.names','is.na'
                                     ,'is.na.data.frame','is.nan'
                                     ,'row.names.data.frame')
-                        ,fn=function(...) message('Forbidden')){
+                        ,fn=function(...) message('Forbidden: '
+                                                  ,deparse(sys.call()))){
   parent <- new.env(parent=baseenv());
   for(ii in setdiff(ls(baseenv(),all.names = TRUE),whitelist)){
     parent[[ii]] <- fn};
@@ -85,16 +181,31 @@ submulti <- function(xx,searchrep
 
 # ---- Manage Data ----
 
-dynchicodes <- function(dat,exclude=c('GEO')
-                        ,colvars=c('UTHSCSA|FINCLASS','TOBACCO_USER','MYC_STATUS','MYC_RECV_EMAIL','MYC_ACCESSED','Institution','DischStat','DischDisp','DischargeStatus','DEM|VITAL','DEM|STATE','DEM|SEX','DEM|RELIGION','DEM|RACE','DEM|MARITAL','DEM|LANGUAGE','DEM|ETHNICITY')
-                        ,custom=c(`Abnormal Labs`=quote(substr(CCD,1,7) %in% c('L_LOINC','H_LOINC')))){
+dynchicodes <- function(dat,exclude=c('GEO','COHORT','DEM|GPC|ENROLLMENT'
+                                      ,'AdmSrc','ResearchEnroll')
+                        ,colvars=c('UTHSCSA|FINCLASS','TOBACCO_USER'
+                                   ,'MYC_STATUS','MYC_RECV_EMAIL','MYC_ACCESSED'
+                                   ,'Institution','DischStat','DischDisp'
+                                   ,'DischargeStatus','DEM|VITAL'
+                                   ,'DEM|SEX','DEM|RACE'
+                                   ,'DEM|MARITAL'
+                                   ,'DEM|ETHNICITY','SEXUALLY_ACTIVE'
+                                   ,'ENC|TYPE','MED_ALERT','emailexists'
+                                   ,'A_MicroPos','DEM|GEO|UTMED','ADMIT|SOURCE'
+                                   ,'MOKELESS_TOB_USE','SMOKING_TOB_USE'
+                                   ,'SMOKELESS_QUIT_DATE','SMOKING_QUIT_DATE'
+                                   ,'PACK_PER_DAY')
+                        ,custom=c(`LOINC (Abnormal Lab Results)`="substr(CCD,1,7) %in% c('L_LOINC','H_LOINC')")){
   if(!'CATEGORY' %in% names(dat)) dat$CATEGORY <- dat$PREFIX;
   out <- unique(subset(dat,PREFIX %in% colvars)[,c('PREFIX','CATEGORY','CCD')]);
   out <- rbind(out
                ,unique(cbind(subset(dat
                                     ,!PREFIX %in% c(colvars,exclude))[
-                                      ,c('PREFIX','CATEGORY')],CCD=NA)));
+                                      ,c('PREFIX','CATEGORY')],CCD=NA))
+               ,data.frame(PREFIX=custom,CATEGORY=names(custom),CCD=NA
+                           ,stringsAsFactors = FALSE));
   browser();
+  return(out[with(out,order(PREFIX=='TOTAL',CCD,CATEGORY)),]);
 }
 
 #' Look for R code, cached_data.rdata, and csv files in zip or directory
@@ -168,7 +279,7 @@ codehr_init <- function(file,confenv=new.env(),defaultenv=.GlobalEnv
   
   # try to read and load various files ----
   # any R code...
-  for(ii in list.files(confdir,'*.R$|*.r$')){
+  for(ii in list.files(confdir,'*\\.R$|*\\.r$')){
     source(file.path(confdir,ii),confenv)};
   # look for previously cached data
   .load0 <- ls(confenv);
@@ -399,22 +510,40 @@ chifilter <- function(data,ncutoff=300
     groups <- setdiff(names(attr(data,'sectioncols')),c('Info','REF'))} else {
       warning("It is recommended you not manually specify the 'groups'"
               ,"argument. If you encounter an error, check there first.")};
-  template <- paste('('
-                    # ,npattern,'>',ncutoff,'&'
-                    ,'p.adjust(pchisq(',chipattern,',df=1,lower=F),"fdr")<'
-                    ,chicutoff,'&'
-                    ,'abs(log(',oddspattern,'))','>',abs(log(oddscutoff))
-                    ,other,')');
-  filter <- paste(grpfilter<-sapply(groups,function(xx) sprintf(template,xx))
-                  ,collapse='|');
-  out <- subset(data,N_REF>ncutoff & eval(parse(text=filter)));
+  # Dynamically adjust cutoffs so that something gets returned
+  outrows <- 0; out_try <- 0;
+  while(outrows<2){
+    template <- paste('('
+                      # ,npattern,'>',ncutoff,'&'
+                      ,'p.adjust(pchisq(',chipattern,',df=1,lower=F),"fdr")<'
+                      ,chicutoff,'&'
+                      ,'abs(log(',oddspattern,'))','>',abs(log(oddscutoff))
+                      ,other,')');
+    filter <- paste(grpfilter<-sapply(groups,function(xx) sprintf(template,xx))
+                    ,collapse='|');
+    out <- subset(data,N_REF>ncutoff & eval(parse(text=filter)));
+    if(chicutoff==1 && oddscutoff==1) break;
+    if((outrows<-NROW(out))<2){
+      warning('No records selected, making filtering criteria less stringent');
+      chicutoff <- min(1,chicutoff + 0.05); oddscutoff <- max(1,oddscutoff - 0.1);
+    }
+  }
+  if(!exists('out')) browser();
+  if(NROW(out)<2){
+    warning('No records selected, perhaps filtering criteria too stringent?');
+    return(subset(dat,FALSE))};
   attr(out,'sectioncols') <- attr(data,'sectioncols');
   attr(out,'totalrow') <- dplyr::bind_rows(out[FALSE,],attr(data,'totalrow'));
+  attr(out,'chicutoff') <- chicutoff;
+  attr(out,'oddscutoff') <- oddscutoff;
   # If the filterbygroup flag is set (default) NA-out the individual values for
   # the group failing to make the cutoff
   if(filterbygroup) for(ii in groups){
-    out[!coalesce(with(out,eval(parse(text=grpfilter[ii]))),F)
-        ,attr(out,'sectioncols')[[ii]]]<-NA};
+    message('chifilter, group=',ii);
+    iiresult<-try(out[!coalesce(with(out,eval(parse(text=grpfilter[ii]))),F)
+        ,attr(out,'sectioncols')[[ii]]]<-NA);
+    #if(is(iiresult,'try-error')) browser()
+    };
   if(!varclass %in% names(out)){
     varclass <- '';
     warning('"varclass" variable not found, ignoring');
@@ -439,8 +568,8 @@ selectcodegrps <- function(data,codemap
       warning("It is recommended you not manually specify the 'groups'"
               ,"argument. If you encounter an error, check there first.")};
   # validate input
-  if(!all.equal(names(codemap)[1:4]
-                ,c('PREFIX','Category','CCD','PseudoPrefix'))){
+  if(!isTRUE(all.equal(names(codemap)[1:4]
+                ,c('PREFIX','Category','CCD','PseudoPrefix')))){
     stop("The 'codemap' argument must be a data.frame like object"
          ," that has columns 'PREFIX','Category', and 'CCD'.")};
   if(!identical(unique(codemap[,c('PREFIX','CCD')])
@@ -454,12 +583,21 @@ selectcodegrps <- function(data,codemap
   # further filtering.
   if('ALL' %in% prefix){
     oo <- chifilter(data,...);
-    oo$Category<-unlist(submulti(oo$PREFIX,demogcodes,method='exact'));
+    ooallcat <- unlist(submulti(oo$PREFIX,codemap,method='exact'));
+    if(is.null(oo$Category)) oo$Category <- ooallcat else {
+      oo$Category<-ifelse(is.na(oo$Category),ooallcat,oo$Category)};
     return(oo);
     };
   # Otherwise, do code-specific filtering.
   # TODO: think about what would actually happen if somebody selected a mix of
   #       static and dynamic selectors
+  
+  # catch invalid prefix arguments and set a fallback value
+  if(length(intersect(prefix,codemap$PREFIX))==0){
+    warning("None of the values in 'prefix' (",paste(prefix,collapse=", ")
+            ,") exist in the data. Defaulting to first available.");
+    prefix <- codemap$PREFIX[1];
+    };
   selst <- bind_rows(lapply(prefix,function(ii){
     subset(codemap,!is.na(CCD) & PREFIX==ii)}));
   # dynamic selectors-- only the prefix is set, and which variables
@@ -468,12 +606,19 @@ selectcodegrps <- function(data,codemap
     subset(codemap,is.na(CCD) & PREFIX==ii)}))[,c('PREFIX','Category')] %>%
     subset(!grepl('^CUSTOM=',PREFIX));
   oost <- if(nrow(selst)>0) left_join(selst,data) else data[0,];
-  oodn <- if(nrow(seldn)>0) left_join(seldn,chifilter(data,...)) else data[0,];
+  oo_attrs <- list(); oodn <- data[0,];
+  if(nrow(seldn)>0){
+    oofiltered <- chifilter(data,...);
+    oodn <- left_join(seldn,oofiltered);
+    oo_attrs <- attributes(oofiltered)[c('chicutoff','oddscutoff')];
+    };
   for(ii in grep('^CUSTOM=',prefix,val=T)){
     # custom pseudo-prefixes
     ooii <- chifilter(data,other=gsub('^CUSTOM=',' & ',ii),...);
     if(nrow(ooii)>0){
       ooii$Category <- subset(codemap,PREFIX==ii)$Category;
+      oo_attrs$chicutoff <- max(oo_attrs$chicutoff,attr(ooii,'chicutoff'));
+      oo_attrs$oddscutoff <- min(oo_attrs$oddscutoff,attr(ooii,'oddscutoff'));
       oodn <- rbind(oodn,ooii);}
   }
   # return static and then dynamically selected variables
@@ -483,6 +628,7 @@ selectcodegrps <- function(data,codemap
   attr(oo,'totalrow') <- dplyr::bind_rows(oo[FALSE,],attr(data,'totalrow'));
   #});
   #if(is(.dbg,'try-error')) browser();
+  if(NROW(oodn)>0) attributes(oo)[c('chicutoff','oddscutoff')] <- oo_attrs;
   oo;
 }
 
