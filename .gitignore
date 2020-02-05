@@ -48,6 +48,7 @@ project_*.R
 .rstudio.sterr
 cached_data.rdata
 .rccreds
+.out
 
 # lock files
 .~lock*
