@@ -195,17 +195,27 @@ dynchicodes <- function(dat,exclude=c('GEO','COHORT','DEM|GPC|ENROLLMENT'
                                    ,'MOKELESS_TOB_USE','SMOKING_TOB_USE'
                                    ,'SMOKELESS_QUIT_DATE','SMOKING_QUIT_DATE'
                                    ,'PACK_PER_DAY')
+                        ,colvarthreshold=20
                         ,custom=c(`LOINC (Abnormal Lab Results)`="substr(CCD,1,7) %in% c('L_LOINC','H_LOINC')")){
   if(!'CATEGORY' %in% names(dat)) dat$CATEGORY <- dat$PREFIX;
-  out <- unique(subset(dat,PREFIX %in% colvars)[,c('PREFIX','CATEGORY','CCD')]);
-  out <- rbind(out
-               ,unique(cbind(subset(dat
-                                    ,!PREFIX %in% c(colvars,exclude))[
-                                      ,c('PREFIX','CATEGORY')],CCD=NA))
-               ,data.frame(PREFIX=custom,CATEGORY=names(custom),CCD=NA
-                           ,stringsAsFactors = FALSE));
-  browser();
-  return(out[with(out,order(PREFIX=='TOTAL',CCD,CATEGORY)),]);
+  # Find categories with only one code each
+  singletons <- table(dat$PREFIX); 
+  colvars <- setdiff(c(colvars,names(singletons[singletons<colvarthreshold]))
+                     ,c(exclude,'TOTAL'));
+  singletons <- setdiff(names(singletons[singletons==1]),c(exclude,'TOTAL'));
+  out <- unique(subset(dat,PREFIX %in% 
+                         c(singletons,colvars))[,c('PREFIX','CATEGORY','CCD')]);
+  out <- rbind(out,mutate(subset(out,PREFIX %in% singletons)
+                          ,CCD=paste0(PREFIX,':@')));
+  out <- out[with(out,order(CCD,CATEGORY)),];
+  out_noccd <- rbind(unique(subset(dat,!PREFIX %in%
+                                     c(colvars,exclude,'TOTAL'))[
+                                        ,c('PREFIX','CATEGORY')])
+                     ,data.frame(PREFIX=custom,CATEGORY=names(custom)
+                                 ,stringsAsFactors = FALSE)
+                     ,subset(dat,PREFIX=='TOTAL')[,c('PREFIX','CATEGORY')]);
+  out_noccd$CCD <- NA;
+  rbind(out,out_noccd[with(out_noccd,order(PREFIX=='TOTAL',PREFIX)),]);
 }
 
 #' Look for R code, cached_data.rdata, and csv files in zip or directory
@@ -487,7 +497,7 @@ quickreshape <- function(data,pattern=c('FRC_%s')
                  ,timevar=timevar);
 }
 
-chifilter <- function(data,ncutoff=300
+chifilter <- function(data,ncutoff=10
                       ,chicutoff=0.05 #200
                       ,oddscutoff=1.5
                       ,npattern='N_%1$s',chipattern='CHISQ_%1$s'
@@ -512,30 +522,35 @@ chifilter <- function(data,ncutoff=300
               ,"argument. If you encounter an error, check there first.")};
   # Dynamically adjust cutoffs so that something gets returned
   outrows <- 0; out_try <- 0;
-  while(outrows<2){
-    template <- paste('('
-                      # ,npattern,'>',ncutoff,'&'
-                      ,'p.adjust(pchisq(',chipattern,',df=1,lower=F),"fdr")<'
-                      ,chicutoff,'&'
-                      ,'abs(log(',oddspattern,'))','>',abs(log(oddscutoff))
-                      ,other,')');
-    filter <- paste(grpfilter<-sapply(groups,function(xx) sprintf(template,xx))
-                    ,collapse='|');
-    out <- subset(data,N_REF>ncutoff & eval(parse(text=filter)));
-    if(chicutoff==1 && oddscutoff==1) break;
-    if((outrows<-NROW(out))<2){
+  template <- try(paste('('
+                    #,npattern,'>',ncutoff,'&'
+                    ,'p.adjust(pchisq(',chipattern,',df=1,lower=F),"fdr")<'
+                    ,chicutoff,'&'
+                    ,'abs(log(',oddspattern,'))','>',abs(log(oddscutoff))
+                    ,other,')'));
+  if(is(template,'try-error')) browser();
+  filter <- paste(grpfilter<-sapply(groups,function(xx) sprintf(template,xx))
+                  ,collapse='|');
+    #if(other!='') browser();
+  out <- subset(data,N_REF>ncutoff & eval(parse(text=filter)));
+  # if no result
+  if(NROW(out)<1){
+    if(ncutoff != 10 || chicutoff != 1 || oddscutoff != 1){
+      # re-run current invocation but with minimally stringent criteria
       warning('No records selected, making filtering criteria less stringent');
-      chicutoff <- min(1,chicutoff + 0.05); oddscutoff <- max(1,oddscutoff - 0.1);
-    }
+      retry <- match.call();
+      retry$ncutoff <- 10; retry$chicutoff <- retry$oddscutoff <- 1;
+      retry$other <- other;
+      out <- eval(retry);
+      return(out) } else {
+        warning('No records matching criteria were found');
+        return(subset(data,FALSE))};
   }
-  if(!exists('out')) browser();
-  if(NROW(out)<2){
-    warning('No records selected, perhaps filtering criteria too stringent?');
-    return(subset(dat,FALSE))};
   attr(out,'sectioncols') <- attr(data,'sectioncols');
   attr(out,'totalrow') <- dplyr::bind_rows(out[FALSE,],attr(data,'totalrow'));
   attr(out,'chicutoff') <- chicutoff;
   attr(out,'oddscutoff') <- oddscutoff;
+  attr(out,'ncutoff') <- ncutoff;
   # If the filterbygroup flag is set (default) NA-out the individual values for
   # the group failing to make the cutoff
   if(filterbygroup) for(ii in groups){
