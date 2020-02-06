@@ -196,16 +196,19 @@ dynchicodes <- function(dat,exclude=c('GEO','COHORT','DEM|GPC|ENROLLMENT'
                                    ,'SMOKELESS_QUIT_DATE','SMOKING_QUIT_DATE'
                                    ,'PACK_PER_DAY')
                         ,colvarthreshold=20
-                        ,custom=c(`LOINC (Abnormal Lab Results)`="substr(CCD,1,7) %in% c('L_LOINC','H_LOINC')")){
+                        ,custom=c(`LOINC (Low/High Lab Results)`="CUSTOM=substr(CCD,1,7) %%in%% c('L_LOINC','H_LOINC')")){
   if(!'CATEGORY' %in% names(dat)) dat$CATEGORY <- dat$PREFIX;
+  # quick and lazy comparator finder
+  cohort <- grep('^FRC_',names(dat))[2];
   # Find categories with only one code each
-  singletons <- table(dat$PREFIX); 
+  singletons <- table(dat$PREFIX[!is.na(dat[,cohort])]); 
   colvars <- setdiff(c(colvars,names(singletons[singletons<colvarthreshold]))
                      ,c(exclude,'TOTAL'));
   singletons <- setdiff(names(singletons[singletons==1]),c(exclude,'TOTAL'));
   out <- unique(subset(dat,PREFIX %in% 
                          c(singletons,colvars))[,c('PREFIX','CATEGORY','CCD')]);
-  out <- rbind(out,mutate(subset(out,PREFIX %in% singletons)
+  out <- rbind(out,mutate(unique(subset(out,PREFIX %in% 
+                                   singletons)[,c('PREFIX','CATEGORY')])
                           ,CCD=paste0(PREFIX,':@')));
   out <- out[with(out,order(CCD,CATEGORY)),];
   out_noccd <- rbind(unique(subset(dat,!PREFIX %in%
@@ -215,7 +218,9 @@ dynchicodes <- function(dat,exclude=c('GEO','COHORT','DEM|GPC|ENROLLMENT'
                                  ,stringsAsFactors = FALSE)
                      ,subset(dat,PREFIX=='TOTAL')[,c('PREFIX','CATEGORY')]);
   out_noccd$CCD <- NA;
-  rbind(out,out_noccd[with(out_noccd,order(PREFIX=='TOTAL',PREFIX)),]);
+  out <- rbind(out,out_noccd[with(out_noccd,order(PREFIX=='TOTAL',PREFIX)),]);
+  names(out) <- gsub('CATEGORY','Category',names(out));
+  out;
 }
 
 #' Look for R code, cached_data.rdata, and csv files in zip or directory
@@ -302,6 +307,11 @@ codehr_init <- function(file,confenv=new.env(),defaultenv=.GlobalEnv
     iiobj <- tools::file_path_sans_ext(ii);
     if(! iiobj %in% ls(confenv)){
       confenv[[iiobj]] <- read_csv(file.path(confdir,ii))}};
+  if('demogcodes' %in% names(confenv) && 
+     !'Category' %in% names(confenv$demogcodes)){
+    if(!is.na(catcol<-match('category',tolower(names(confenv$demogcodes))))){
+      names(confenv$demogcodes)[catcol]<-'Category'};
+  }
   # generate the main data ----
   if(missing(loadcode)) loadcode <- quote(
     {if(!'dat' %in% ls()||!isValidChi(dat)){
@@ -583,8 +593,9 @@ selectcodegrps <- function(data,codemap
       warning("It is recommended you not manually specify the 'groups'"
               ,"argument. If you encounter an error, check there first.")};
   # validate input
-  if(!isTRUE(all.equal(names(codemap)[1:4]
-                ,c('PREFIX','Category','CCD','PseudoPrefix')))){
+  if(!isTRUE(all.equal(names(codemap)[1:3]
+                ,c('PREFIX','Category','CCD')))){ 
+    #,'PseudoPrefix')))){
     stop("The 'codemap' argument must be a data.frame like object"
          ," that has columns 'PREFIX','Category', and 'CCD'.")};
   if(!identical(unique(codemap[,c('PREFIX','CCD')])
