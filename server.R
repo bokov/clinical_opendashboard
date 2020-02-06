@@ -113,7 +113,7 @@ shinyServer(function(input, output, session) {
 
   observe({
     updateSelectInput(session,inputId='selBasic'
-                      ,choices=with(rv$sv$demogcodes
+                      ,choices=with(subset(rv$sv$demogcodes,PREFIX!='TOTAL')
                                     ,c(setNames(PREFIX,Category)
                                        ,`All Variables`='ALL')
                                     ,selected=rv$rprefix));
@@ -177,7 +177,7 @@ shinyServer(function(input, output, session) {
                            ,oddscutoff=input$slOR);
     # if the filtering returns a non-null group, update reactive values with
     # new filtered data and cutoffs
-    if(nrow(rdat)>0){ 
+    if(nrow(rdat)>0 && any(!is.na(rdat$CCD))){ 
       rv$rdat <- rdat; rv$rncut <- input$slN;
       if((rv$rchicut <- c(attr(rdat,'chicutoff'),input$slChi)[1]) != 
          input$slChi){
