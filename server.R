@@ -83,9 +83,7 @@ shinyServer(function(input, output, session) {
 
 # ---- initialize reactive values ----
   rv <- reactiveValues(
-     rchicut=slidevals$Chi
-    ,roddscut=slidevals$OR
-    ,starting=TRUE
+     starting=TRUE
     ,rsysinfo=unclass(c(Sys.info(),sessionInfo()
                         ,filesys=list(BASEPATH=getwd()
                                       ,FILES=list.files(all.files=TRUE))
@@ -101,6 +99,8 @@ shinyServer(function(input, output, session) {
   rv$rncut <- with(isolate(rv$sv)
                    ,round(min(dat_totals[
                      ,grep('^N_',names(dat_totals))]) * minfrac));
+  rv$rchicut<-with(isolate(rv$sv),slidevals$Chi);
+  rv$roddscut<-with(isolate(rv$sv),slidevals$OR);
   rv$rdat <- with(isolate(rv$sv)
                   ,selectcodegrps(get('dat'),prefix=get('selBasicDefault')
                                   ,codemap = get('demogcodes')));
@@ -117,7 +117,10 @@ shinyServer(function(input, output, session) {
                                     ,c(setNames(PREFIX,Category)
                                        ,`All Variables`='ALL')
                                     ,selected=rv$rprefix));
-    },label = 'selBasic_update');
+    updateSliderInput(session,inputId='slN',value=rv$sv$slidevals$N);
+    updateNumericInput(session,inputId='slChi',value=rv$sv$slidevals$Chi);
+    updateSliderInput(session,inputId='slOR',value=rv$sv$slidevals$OR);
+  },label = 'selBasic_update');
   hide('bupdate');
   
   # ---- System/Session Info ----
@@ -138,9 +141,9 @@ shinyServer(function(input, output, session) {
   # allow the user to reset the sliders to their starting values
   observeEvent(input$breset,{
     message('Processing reset click');
-    updateSliderInput(session,inputId='slN',value=slidevals$N);
-    updateSliderInput(session,inputId='slChi',value=slidevals$Chi);
-    updateSliderInput(session,inputId='slOR',value=slidevals$OR);
+    updateSliderInput(session,inputId='slN',value=rv$sv$slidevals$N);
+    updateNumericInput(session,inputId='slChi',value=rv$sv$slidevals$Chi);
+    updateSliderInput(session,inputId='slOR',value=rv$sv$slidevals$OR);
     message('Done with reset click');
   });
   
@@ -149,18 +152,18 @@ shinyServer(function(input, output, session) {
                ,if(rv$starting) {
                  rv$starting <- F; hide('bupdate'); 
                  message('\n HIDING UPDATE DUE TO STARTUP');
-                 } else {
-                 if(input$selBasic != rv$rprefix ||
-                    input$slChi != rv$rchicut ||
-                    input$slN != rv$rncut ||
-                    input$slOR != rv$roddscut) {
-                   show('bupdate'); 
-                   message('\n SHOWING UPDATE');
-                   } else {
-                     hide('bupdate');
-                     message('\n HIDING UPDATE');
-                   }
-                   }
+                 } else if(!is.numeric(input$slChi)){
+                     updateNumericInput(session,inputId='slChi'
+                                        ,value=rv$rchicut)
+                   } else if(input$selBasic != rv$rprefix ||
+                             input$slChi != rv$rchicut ||
+                             input$slN != rv$rncut ||
+                             input$slOR != rv$roddscut) {
+                     show('bupdate'); 
+                     message('\n SHOWING UPDATE');
+                     } else {
+                       hide('bupdate');
+                       message('\n HIDING UPDATE')}
                );
   # ---- Update Button Clicked ----
   observeEvent({input$bupdate},{
@@ -174,11 +177,11 @@ shinyServer(function(input, output, session) {
                            ,oddscutoff=input$slOR);
     # if the filtering returns a non-null group, update reactive values with
     # new filtered data and cutoffs
-    if(nrow(rdat)>1){ 
+    if(nrow(rdat)>0){ 
       rv$rdat <- rdat; rv$rncut <- input$slN;
       if((rv$rchicut <- c(attr(rdat,'chicutoff'),input$slChi)[1]) != 
          input$slChi){
-        updateSliderInput(session,inputId='slChi',value=rv$rchicut);
+        updateNumericInput(session,inputId='slChi',value=rv$rchicut);
         showNotification('No values were returned, so the False Discovery Rate cutoff had to be adjusted'
                          ,type='warning')};
       if((rv$roddscut <- c(attr(rdat,'oddscutoff'),input$slOR)[1]) != 
@@ -186,14 +189,20 @@ shinyServer(function(input, output, session) {
         updateSliderInput(session,inputId='slOR',value=rv$roddscut);
         showNotification('No values were returned, so the Odds Ratio cutoff had to be adjusted'
                          ,type='warning')};
-      rv$rprefix <- input$selBasic } else {
+      if((rv$rncut <- c(attr(rdat,'ncutoff'),input$slN)[1]) != 
+         input$slN){
+        updateSliderInput(session,inputId='slN',value=rv$rncut);
+        showNotification('No values were returned, so the Sample Size cutoff had to be adjusted'
+                         ,type='warning')};
+      rv$rprefix <- input$selBasic 
+    } else {
       # otherwise, reset the settings to what they were before the update button
       # got pressed
       showNotification('No results match criteria, restoring previous ones.'
                        ,type='error');
       updateSelectInput(session,inputId='selBasic',selected=rv$rprefix);
       updateSliderInput(session,inputId='slN',value=rv$rncut);
-      updateSliderInput(session,inputId='slChi',value=rv$rchicut);
+      updateNumericInput(session,inputId='slChi',value=rv$rchicut);
       updateSliderInput(session,inputId='slOR',value=rv$roddscut);
     };
     hide('bupdate');
@@ -222,9 +231,12 @@ shinyServer(function(input, output, session) {
               ,plot.margin = margin(30,30,60,40));
       txtMainVar <- with(rv$sv,get('txtMainVarStatic'));
     }
-    title <- submulti(isolate(rv$rprefix)
-                      ,unique(rv$sv$demogcodes[,c('PREFIX','Category')])
-                      ,method='exact') %>% unlist %>% paste0(collapse=', ');
+    title <- subset(rv$sv$demogcodes,PREFIX %in%
+                      isolate(rv$rprefix))$Category %>% 
+      unique %>% paste(collapse=', ');
+    # title <- submulti(isolate(rv$rprefix)
+    #                   ,unique(rv$sv$demogcodes[,c('PREFIX','Category')])
+    #                   ,method='exact') %>% unlist %>% paste0(collapse=', ');
     output$maintext <- renderText(sprintf(paste(with(rv$sv
                                                      ,get('txtMainVarCommon'))
                                                 ,txtMainVar)
