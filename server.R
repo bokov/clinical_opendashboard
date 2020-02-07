@@ -152,18 +152,18 @@ shinyServer(function(input, output, session) {
                ,if(rv$starting) {
                  rv$starting <- F; hide('bupdate'); 
                  message('\n HIDING UPDATE DUE TO STARTUP');
-                 } else if(!is.numeric(input$slChi)){
-                     updateNumericInput(session,inputId='slChi'
-                                        ,value=rv$rchicut)
-                   } else if(input$selBasic != rv$rprefix ||
-                             input$slChi != rv$rchicut ||
-                             input$slN != rv$rncut ||
-                             input$slOR != rv$roddscut) {
-                     show('bupdate'); 
-                     message('\n SHOWING UPDATE');
-                     } else {
-                       hide('bupdate');
-                       message('\n HIDING UPDATE')}
+                } else if(!is.numeric(input$slChi)){
+                  updateNumericInput(session,inputId='slChi'
+                                     ,value=rv$rchicut)
+                } else if(!identical(sort(input$selBasic),sort(rv$rprefix)) ||
+                          input$slChi != rv$rchicut ||
+                          input$slN != rv$rncut ||
+                          input$slOR != rv$roddscut) {
+                  show('bupdate');
+                  message('\n SHOWING UPDATE');
+                } else {
+                  hide('bupdate');
+                  message('\n HIDING UPDATE')}
                );
   # ---- Update Button Clicked ----
   observeEvent({input$bupdate},{
@@ -265,7 +265,7 @@ shinyServer(function(input, output, session) {
     },server=F);
   # ---- Disable or Enable Advanced Filters ----
   observeEvent(input$selBasic,{
-    if(input$selBasic %in% rv$sv$prefixpoints) {
+    if(any(input$selBasic %in% rv$sv$prefixpoints)) {
       show(selector=".panel[value='Advanced']");
       showNotification('Advanced filters available for this data element')
       } else {
