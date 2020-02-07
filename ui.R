@@ -32,7 +32,7 @@ shinyUI(fluidPage(
                                                        ,choices=c()
                                                        #,selBasicChoices
                                                        #,selected = selBasicDefault
-                                                       #,multiple=T
+                                                       ,multiple=T
                                                        )
                                           )
                          ,bsCollapsePanel(title=span("Advanced"
