@@ -719,7 +719,11 @@ quickpoints <- function(
   data0 <- quickreshape(data,other=other);
   # rename the reference column to something predictable
   names(data0) <- sub(yy,'FRC_REF',names(data0));
-  if(NROW(searchrep)>0) data0$Cohort <- submulti(data0$Cohort,searchrep); 
+  if(NROW(searchrep)>0) {
+    data0$Cohort <- submulti(data0$Cohort,searchrep); 
+    data0$Cohort <- with(data0,factor(Cohort
+                                      ,levels=intersect(searchrep[,2],Cohort)));
+  }
   # create the tooltip column
   # TODO: NAME isn't guaranteed to be used in future applications, think about
   # better factoring.
