@@ -688,9 +688,18 @@ quickbars <- function(data,labels='NAME',colprefix='FRC_'
   # the factor thing is so the order of the columns is the same as
   # their first occurrence in the input 
   data0$Item <- factor(data0$Item,levels = unique(data0$Item));
+  data0$refline <- subset(data0,Group=='Overall Population')$Percent;
   out <- ggplot(data0,aes(x=Item,y=Percent,fill=Group,text=tip));
-  out + geom_col(width=0.6,position = position_dodge(width = 0.6)) +
-    scale_y_continuous(limits = 0:1,labels=percent) + xlab('')
+  out <- out + geom_col(width=0.6,position = position_dodge(width = 0.6)) +
+    scale_y_continuous(limits = 0:1,labels=percent) + xlab('');
+  # adds reference horizontal line segments to bar plots but ggplotly renders
+  # the legend for the segments despite suppressing it in ggplot. So, removing
+  # for now
+  # out <- out+geom_errorbar(aes(ymax=refline,ymin=refline,color='')
+  #                          ,show.legend = FALSE,lwd=0.5
+  #                          ,position=position_dodge(width=0.6)) + 
+  #   scale_color_manual(name='',values='#00000050')+guides(color='none');
+  out;
 }
 quickpoints <- function(
   data,labels='NAME',colprefix='FRC_'
