@@ -502,7 +502,7 @@ quickreshape <- function(data,pattern=c('FRC_%s')
               ,"argument. If you encounter an error, check there first.")};
   varyingarg <- setdiff(c(sapply(groups,function(xx) sprintf(pattern,xx)))
                         ,other);
-  out <- data[,c(other,varyingarg)];
+  out <- data.frame(data[,c(other,varyingarg)]);
   out <- reshape(out,direction='long',varying=varyingarg,sep=sep
                  ,timevar=timevar);
 }
